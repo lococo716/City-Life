@@ -486,6 +486,7 @@ function invUse(itemId) {
   addLog(`Used ${it.name}`);
   toast("Item used");
 }
+
 /* =====================
    SHOP BUY
 ===================== */
@@ -846,6 +847,321 @@ function doGym(statKey) {
   tryLevelUp();
 }
 /* =====================
+   PAGE RENDERS (RESTORED)
+   These were missing, causing tabs to appear blank.
+===================== */
+
+function renderCrimesPage() {
+  const jailed = isJailed();
+  const ko = isKO();
+
+  pageCrimes.innerHTML = `
+    <div class="card">
+      <div class="section-title">Crimes</div>
+      <div class="muted">Spend energy to commit crimes. Higher crimes are riskier.</div>
+      <div class="hr"></div>
+      <div class="muted">Status: ${jailed ? `🚔 In Jail` : ko ? `💫 KO (heal first)` : `✅ Free`}</div>
+    </div>
+
+    <div class="card" style="margin-top:12px;">
+      <div class="list">
+        ${CRIMES.map(c => {
+          const locked = state.player.level < c.unlock;
+          const disabled = jailed || ko || locked || state.player.energy < c.energy;
+
+          return `
+            <div class="row">
+              <div class="row__left">
+                <div class="row__title">${c.name}</div>
+                <div class="row__sub">
+                  +$${c.money[0]}–$${c.money[1]} • +${c.xp} XP •
+                  Success ${pct(c.success)}% • Jail ${pct(c.jail)}%
+                </div>
+              </div>
+              <div class="row__right">
+                ${locked ? `<span class="tag">Unlock Lv ${c.unlock}</span>` : `<span class="tag">Energy ${c.energy}</span>`}
+                <button class="btn btn--small btn--primary"
+                  data-action="doCrime"
+                  data-crime="${c.id}"
+                  ${disabled ? "disabled" : ""}>
+                  Do
+                </button>
+              </div>
+            </div>
+          `;
+        }).join("")}
+      </div>
+    </div>
+  `;
+}
+
+function renderFightsPage() {
+  const jailed = isJailed();
+  const ko = isKO();
+
+  const enemyList = ENEMIES.map(e => {
+    const locked = state.player.level < e.unlock;
+    const disabled = jailed || ko || locked || state.player.energy < e.energy;
+    return `
+      <div class="row">
+        <div class="row__left">
+          <div class="row__title">🥊 ${e.name}</div>
+          <div class="row__sub">
+            +$${e.money[0]}–$${e.money[1]} • +${e.xp} XP • Rep +${e.rep || 0}
+          </div>
+        </div>
+        <div class="row__right">
+          ${locked ? `<span class="tag">Unlock Lv ${e.unlock}</span>` : `<span class="tag">Energy ${e.energy}</span>`}
+          <button class="btn btn--small btn--primary"
+            data-action="doFight"
+            data-kind="enemy"
+            data-fight="${e.id}"
+            ${disabled ? "disabled" : ""}>
+            Fight
+          </button>
+        </div>
+      </div>
+    `;
+  }).join("");
+
+  const rivalList = RIVALS.map(r => {
+    const locked = state.player.level < r.unlock;
+    const disabled = jailed || ko || locked || state.player.energy < r.energy;
+    const wins = state.rivals?.defeatedCounts?.[r.id] || 0;
+
+    return `
+      <div class="row">
+        <div class="row__left">
+          <div class="row__title">👑 ${r.name}</div>
+          <div class="row__sub">
+            Wins: ${wins} • +$${r.money[0]}–$${r.money[1]} • +${r.xp} XP
+          </div>
+        </div>
+        <div class="row__right">
+          ${locked ? `<span class="tag">Unlock Lv ${r.unlock}</span>` : `<span class="tag">Energy ${r.energy}</span>`}
+          <button class="btn btn--small btn--gold"
+            data-action="doFight"
+            data-kind="rival"
+            data-fight="${r.id}"
+            ${disabled ? "disabled" : ""}>
+            Rival
+          </button>
+        </div>
+      </div>
+    `;
+  }).join("");
+
+  pageFights.innerHTML = `
+    <div class="card">
+      <div class="section-title">Fights</div>
+      <div class="muted">Battle enemies for cash, XP, and reputation. Rivals give milestone rep.</div>
+      <div class="hr"></div>
+      <div class="muted">Status: ${jailed ? `🚔 In Jail` : ko ? `💫 KO (heal first)` : `✅ Free`}</div>
+    </div>
+
+    <div class="card" style="margin-top:12px;">
+      <div class="section-title" style="margin-top:0;">Enemies</div>
+      <div class="list">${enemyList}</div>
+    </div>
+
+    <div class="card" style="margin-top:12px;">
+      <div class="section-title" style="margin-top:0;">Rivals</div>
+      <div class="list">${rivalList}</div>
+    </div>
+  `;
+}
+
+function renderGymPage() {
+  const jailed = isJailed();
+  const ko = isKO();
+
+  const activeGym = jailed ? GYM.jail : GYM.normal;
+
+  pageGym.innerHTML = `
+    <div class="card">
+      <div class="section-title">${activeGym.name}</div>
+      <div class="muted">
+        Train to increase Attack / Defense.
+        ${jailed ? `<br><b>Jail Gym is only visible while jailed.</b>` : ``}
+      </div>
+      <div class="hr"></div>
+      <div class="muted">
+        Cost: ${activeGym.energy} Energy • Success: ${pct(activeGym.success + propertyTrainingBonus())}% • +${activeGym.xp} XP
+      </div>
+    </div>
+
+    <div class="card" style="margin-top:12px;">
+      <div class="grid grid--2">
+        <button class="btn btn--primary"
+          data-action="doGym"
+          data-stat="attack"
+          ${ko || state.player.energy < activeGym.energy ? "disabled" : ""}>
+          Train Attack (+1)
+        </button>
+
+        <button class="btn btn--success"
+          data-action="doGym"
+          data-stat="defense"
+          ${ko || state.player.energy < activeGym.energy ? "disabled" : ""}>
+          Train Defense (+1)
+        </button>
+      </div>
+
+      ${jailed ? `
+        <div class="hr"></div>
+        <div class="muted">
+          Time left in jail: <b>${msToClock((state.timers.jailUntil || 0) - Date.now())}</b>
+        </div>
+      ` : ``}
+    </div>
+  `;
+}
+
+function renderShopPage() {
+  pageShop.innerHTML = `
+    <div class="card">
+      <div class="section-title">Shop</div>
+      <div class="muted">Food goes to your inventory (Energy). Healing items restore Health.</div>
+    </div>
+
+    <div class="card" style="margin-top:12px;">
+      <div class="section-title" style="margin-top:0;">Food (Energy)</div>
+      <div class="list">
+        ${SHOP_FOOD.map(it => `
+          <div class="row">
+            <div class="row__left">
+              <div class="row__title">${it.name}</div>
+              <div class="row__sub">${it.desc}</div>
+            </div>
+            <div class="row__right">
+              <span class="tag">$${it.price}</span>
+              <button class="btn btn--small btn--primary"
+                data-action="buyShop"
+                data-kind="food"
+                data-item="${it.id}"
+                ${state.player.money < it.price ? "disabled" : ""}>
+                Buy
+              </button>
+            </div>
+          </div>
+        `).join("")}
+      </div>
+    </div>
+
+    <div class="card" style="margin-top:12px;">
+      <div class="section-title" style="margin-top:0;">Healing</div>
+      <div class="list">
+        ${SHOP_HEALING.map(it => `
+          <div class="row">
+            <div class="row__left">
+              <div class="row__title">${it.name}</div>
+              <div class="row__sub">${it.desc}</div>
+            </div>
+            <div class="row__right">
+              <span class="tag">$${it.price}</span>
+              <button class="btn btn--small btn--success"
+                data-action="buyShop"
+                data-kind="healing"
+                data-item="${it.id}"
+                ${state.player.money < it.price ? "disabled" : ""}>
+                Buy
+              </button>
+            </div>
+          </div>
+        `).join("")}
+      </div>
+    </div>
+  `;
+}
+
+function renderArmsPage() {
+  refreshBlackMarketIfNeeded();
+
+  const bm = state.blackMarket?.offerWeapon;
+  const bmTimer = Math.max(0, (state.blackMarket?.nextRefreshAt || 0) - Date.now());
+
+  pageArms.innerHTML = `
+    <div class="card">
+      <div class="section-title">Arms Dealer</div>
+      <div class="muted">Weapons and armor boost your Attack/Defense. Equip from Profile → Weapons & Armor.</div>
+    </div>
+
+    <div class="card" style="margin-top:12px;">
+      <div class="section-title" style="margin-top:0;">Weapons</div>
+      <div class="list">
+        ${WEAPONS.map(w => `
+          <div class="row">
+            <div class="row__left">
+              <div class="row__title">${w.name}</div>
+              <div class="row__sub">Attack +${w.atk}</div>
+            </div>
+            <div class="row__right">
+              <span class="tag">$${w.price}</span>
+              <button class="btn btn--small btn--primary"
+                data-action="buyArms"
+                data-kind="weapon"
+                data-item="${w.id}"
+                ${state.player.money < w.price ? "disabled" : ""}>
+                Buy
+              </button>
+            </div>
+          </div>
+        `).join("")}
+      </div>
+    </div>
+
+    <div class="card" style="margin-top:12px;">
+      <div class="section-title" style="margin-top:0;">Armor</div>
+      <div class="list">
+        ${ARMOR.map(a => `
+          <div class="row">
+            <div class="row__left">
+              <div class="row__title">${a.name}</div>
+              <div class="row__sub">Defense +${a.def}</div>
+            </div>
+            <div class="row__right">
+              <span class="tag">$${a.price}</span>
+              <button class="btn btn--small btn--success"
+                data-action="buyArms"
+                data-kind="armor"
+                data-item="${a.id}"
+                ${state.player.money < a.price ? "disabled" : ""}>
+                Buy
+              </button>
+            </div>
+          </div>
+        `).join("")}
+      </div>
+    </div>
+
+    <div class="card" style="margin-top:12px;">
+      <div class="section-title" style="margin-top:0;">🌑 Black Market</div>
+      <div class="muted">Refreshes every 45 minutes • 1% chance of a GOLD weapon</div>
+      <div class="hr"></div>
+
+      ${bm ? `
+        <div class="row">
+          <div class="row__left">
+            <div class="row__title">${bm.name} ${bm.rarity === "gold" ? `<span class="tag tag--gold">GOLD</span>` : ``}</div>
+            <div class="row__sub">Attack +${bm.atk}</div>
+          </div>
+          <div class="row__right">
+            <span class="tag">$${bm.price}</span>
+            <button class="btn btn--small ${bm.rarity === "gold" ? "btn--gold" : "btn--primary"}"
+              data-action="buyBM"
+              ${state.player.money < bm.price ? "disabled" : ""}>
+              Buy
+            </button>
+          </div>
+        </div>
+      ` : `
+        <div class="muted">No offer right now. Next refresh in <b>${msToClock(bmTimer)}</b>.</div>
+      `}
+      <div class="hint">Next refresh in <b>${msToClock(bmTimer)}</b>.</div>
+    </div>
+  `;
+}
+/* =====================
    TITLE UPDATE
 ===================== */
 
@@ -980,7 +1296,9 @@ function renderProfile() {
   profileAvatar.textContent = state.player.avatar;
   profileName.textContent = state.player.name;
   profileTitleBadge.textContent = state.player.title;
-  profileSpecBadge.textContent = "No Specialization";
+
+  // safe: if element exists, set it
+  if (profileSpecBadge) profileSpecBadge.textContent = "No Specialization";
 
   const xpNeed = xpNeededForLevel(state.player.level);
   xpText.textContent = `${state.player.xp} / ${xpNeed}`;
@@ -1023,7 +1341,7 @@ function renderPropertiesPage() {
 }
 
 /* =====================
-   PROFILE INVENTORY / GEAR
+   PROFILE INVENTORY / GEAR / PROPERTIES
 ===================== */
 
 function renderProfileInventory() {
@@ -1057,9 +1375,87 @@ function renderProfileInventory() {
 function renderProfileGear() {
   if (!profileGearBox) return;
 
+  const weapons = state.gear?.weapons || [];
+  const armor = state.gear?.armor || [];
+  const eqW = state.equipment?.weapon;
+  const eqA = state.equipment?.armor;
+
   profileGearBox.innerHTML = `
+    <div class="section-title" style="margin-top:0;">Equipped</div>
     <div class="muted">
-      Manage weapons & armor here.
+      Weapon: <b>${eqW ? `${eqW.name} (+${eqW.atk})` : "None"}</b><br>
+      Armor: <b>${eqA ? `${eqA.name} (+${eqA.def})` : "None"}</b>
+    </div>
+    <div class="hr"></div>
+
+    <div class="section-title" style="margin-top:0;">Weapons</div>
+    <div class="list">
+      ${weapons.length ? weapons.map((w, idx) => `
+        <div class="row">
+          <div class="row__left">
+            <div class="row__title">${w.name}</div>
+            <div class="row__sub">Attack +${w.atk}</div>
+          </div>
+          <div class="row__right">
+            ${w.rarity === "gold" ? `<span class="tag tag--gold">GOLD</span>` : ``}
+            <button class="btn btn--small btn--secondary"
+              data-action="equipWeapon" data-idx="${idx}">
+              Equip
+            </button>
+          </div>
+        </div>
+      `).join("") : `<div class="muted">No weapons owned yet.</div>`}
+    </div>
+
+    <div class="hr"></div>
+
+    <div class="section-title" style="margin-top:0;">Armor</div>
+    <div class="list">
+      ${armor.length ? armor.map((a, idx) => `
+        <div class="row">
+          <div class="row__left">
+            <div class="row__title">${a.name}</div>
+            <div class="row__sub">Defense +${a.def}</div>
+          </div>
+          <div class="row__right">
+            <button class="btn btn--small btn--secondary"
+              data-action="equipArmor" data-idx="${idx}">
+              Equip
+            </button>
+          </div>
+        </div>
+      `).join("") : `<div class="muted">No armor owned yet.</div>`}
+    </div>
+  `;
+}
+
+function renderProfileProps() {
+  if (!profilePropsBox) return;
+
+  const owned = state.properties?.owned || {};
+  const ownedList = PROPERTIES.filter(p => (owned[p.id]?.level || 0) > 0);
+
+  if (!ownedList.length) {
+    profilePropsBox.innerHTML = `<div class="muted">No properties owned yet.</div>`;
+    return;
+  }
+
+  profilePropsBox.innerHTML = `
+    <div class="list">
+      ${ownedList.map(p => {
+        const lvl = owned[p.id].level;
+        return `
+          <div class="row">
+            <div class="row__left">
+              <div class="row__title">${p.name}</div>
+              <div class="row__sub">Level ${lvl} • $${p.baseIncomePerHour * lvl}/hr</div>
+            </div>
+            <div class="row__right">
+              <span class="tag">$${p.baseIncomePerHour}/hr per level</span>
+            </div>
+          </div>
+        `;
+      }).join("")}
     </div>
   `;
 }
@@ -1088,6 +1484,7 @@ function render() {
 
   renderProfileInventory();
   renderProfileGear();
+  renderProfileProps();
 
   navButtons.forEach(btn => {
     if (btn.dataset.route === "crimes" || btn.dataset.route === "fights") {
