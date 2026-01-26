@@ -22,6 +22,45 @@ const MS = {
 const REGEN_INTERVAL = 5 * MS.MIN;
 const BLACK_MARKET_REFRESH = 45 * MS.MIN;
 const PROPERTY_OFFLINE_CAP = 4 * MS.HOUR;
+/* =====================
+   CRIMES (15) — level unlocked, higher = riskier
+===================== */
+
+const CRIMES = [
+  // Tier 1 (Lv 1–3)
+  { id:"pickpocket",   name:"Pickpocket",         unlock:1, energy:2, success:0.86, jail:0.06, money:[40,90],   xp:8,  hpLoss:[0,1],  jailMin:2, jailMax:3 },
+  { id:"shoplift",     name:"Shoplift",           unlock:2, energy:2, success:0.83, jail:0.07, money:[55,120],  xp:10, hpLoss:[0,2],  jailMin:2, jailMax:4 },
+  { id:"mug_tourist",  name:"Mug a Tourist",      unlock:3, energy:3, success:0.80, jail:0.08, money:[85,170],  xp:12, hpLoss:[1,3],  jailMin:3, jailMax:4 },
+
+  // Tier 2 (Lv 4–6)
+  { id:"carjacking",   name:"Carjacking",         unlock:4, energy:4, success:0.76, jail:0.10, money:[140,260], xp:16, hpLoss:[2,4],  jailMin:3, jailMax:5 },
+  { id:"home_burglary",name:"Home Burglary",      unlock:5, energy:4, success:0.74, jail:0.11, money:[170,320], xp:18, hpLoss:[2,5],  jailMin:4, jailMax:6 },
+  { id:"street_scam",  name:"Street Scam",        unlock:6, energy:5, success:0.72, jail:0.12, money:[200,380], xp:20, hpLoss:[2,5],  jailMin:4, jailMax:6 },
+
+  // Tier 3 (Lv 7–10)
+  { id:"armed_robbery",name:"Armed Robbery",      unlock:7, energy:6, success:0.68, jail:0.14, money:[320,520], xp:26, hpLoss:[3,6],  jailMin:5, jailMax:7 },
+  { id:"bank_runner",  name:"Bank Runner Job",    unlock:8, energy:6, success:0.66, jail:0.15, money:[360,600], xp:28, hpLoss:[3,7],  jailMin:5, jailMax:7 },
+  { id:"warehouse_hit",name:"Warehouse Hit",      unlock:9, energy:7, success:0.64, jail:0.16, money:[420,720], xp:30, hpLoss:[4,8],  jailMin:6, jailMax:8 },
+  { id:"vip_extortion",name:"VIP Extortion",      unlock:10,energy:7, success:0.62, jail:0.17, money:[480,840], xp:32, hpLoss:[4,8],  jailMin:6, jailMax:8 },
+
+  // Tier 4 (Lv 11–15)
+  { id:"casino_scam",  name:"Casino Scam",        unlock:11,energy:8, success:0.60, jail:0.18, money:[650,1050],xp:38, hpLoss:[5,9],  jailMin:7, jailMax:9 },
+  { id:"armored_van",  name:"Armored Van Job",    unlock:12,energy:8, success:0.58, jail:0.20, money:[720,1200],xp:40, hpLoss:[5,10], jailMin:7, jailMax:10 },
+  { id:"dock_heist",   name:"Dockside Heist",     unlock:13,energy:9, success:0.56, jail:0.21, money:[820,1400],xp:44, hpLoss:[6,10], jailMin:8, jailMax:10 },
+  { id:"nightclub_take",name:"Nightclub Takeover",unlock:14,energy:9, success:0.54, jail:0.22, money:[900,1600],xp:46, hpLoss:[6,11], jailMin:8, jailMax:10 },
+
+  // Tier 5 (Lv 16+)
+  { id:"high_society", name:"High Society Sting", unlock:16,energy:10,success:0.52, jail:0.24, money:[1100,1900],xp:52,hpLoss:[7,12], jailMin:9, jailMax:10 },
+];
+
+// Helper: random int inclusive
+function randInt(min, max) {
+  return Math.floor(Math.random() * (max - min + 1)) + min;
+}
+
+function pct(n) {
+  return Math.round(n * 100);
+}
 
 /* =====================
    SPECIALIZATIONS
@@ -192,6 +231,103 @@ function isJailed() {
 function isKO() {
   return state.player.health <= 0;
 }
+/* =====================
+   XP / LEVEL UPS
+===================== */
+
+function xpNeededForLevel(level) {
+  return level * 100; // simple v1 curve; easy to tune later
+}
+
+function tryLevelUp() {
+  // allow multiple level-ups if a big reward pushes over
+  while (state.player.xp >= xpNeededForLevel(state.player.level)) {
+    state.player.xp -= xpNeededForLevel(state.player.level);
+    state.player.level += 1;
+
+    // mild growth: every 2 levels +1 max energy and max health
+    if (state.player.level % 2 === 0) {
+      state.player.maxEnergy += 1;
+      state.player.maxHealth += 1;
+    }
+
+    addLog(`⭐ Leveled up to Lv ${state.player.level}!`);
+    toast(`Level up! Lv ${state.player.level}`);
+  }
+
+  // clamp after changes
+  state.player.energy = clamp(state.player.energy, 0, state.player.maxEnergy);
+  state.player.health = clamp(state.player.health, 0, state.player.maxHealth);
+}
+
+/* =====================
+   CRIME ACTION
+===================== */
+
+function doCrime(crimeId) {
+  const c = CRIMES.find(x => x.id === crimeId);
+  if (!c) return;
+
+  if (isJailed()) {
+    toast("You're in jail. Wait it out.");
+    return;
+  }
+  if (isKO()) {
+    toast("You're KO'd. Heal up first.");
+    return;
+  }
+  if (state.player.level < c.unlock) {
+    toast(`Unlocks at Level ${c.unlock}.`);
+    return;
+  }
+  if (state.player.energy < c.energy) {
+    toast("Not enough energy.");
+    return;
+  }
+
+  // Spend energy
+  state.player.energy -= c.energy;
+
+  // Spec modifiers (Mastermind helps crimes)
+  const spec = state.player.specialization ? SPECIALIZATIONS[state.player.specialization] : null;
+  const crimeSuccessMod = spec?.mods?.crimeSuccess ? spec.mods.crimeSuccess : 0;
+  const jailRiskMod = spec?.mods?.jailRisk ? spec.mods.jailRisk : 0;
+
+  const successChance = clamp(c.success + crimeSuccessMod, 0.05, 0.95);
+  const jailChance = clamp(c.jail + jailRiskMod, 0.00, 0.95);
+
+  const roll = Math.random();
+  if (roll <= successChance) {
+    const cash = randInt(c.money[0], c.money[1]);
+    state.player.money += cash;
+    state.player.xp += c.xp;
+
+    addLog(`✅ ${c.name}: Success. +$${cash}, +${c.xp} XP`);
+    toast(`Success! +$${cash}`);
+
+    tryLevelUp();
+    return;
+  }
+
+  // Failure: can lose health and/or go to jail
+  const hpLoss = randInt(c.hpLoss[0], c.hpLoss[1]);
+  if (hpLoss > 0) {
+    state.player.health = clamp(state.player.health - hpLoss, 0, state.player.maxHealth);
+  }
+
+  const jailRoll = Math.random();
+  const gotJailed = jailRoll <= jailChance;
+
+  if (gotJailed) {
+    const jailMins = randInt(c.jailMin, c.jailMax);
+    state.timers.jailUntil = Date.now() + jailMins * MS.MIN;
+    addLog(`🚔 ${c.name}: Caught! -${hpLoss} HP, jailed for ${jailMins} min.`);
+    toast(`Caught! Jailed ${jailMins} min`);
+  } else {
+    addLog(`❌ ${c.name}: Failed. -${hpLoss} HP (you got away).`);
+    toast("Failed (got away)");
+  }
+}
 
 /* =====================
    LOG / TOAST
@@ -260,6 +396,11 @@ document.body.addEventListener("click", e => {
     save();
     render();
   }
+  if (action === "doCrime") {
+    doCrime(btn.dataset.crime);
+    save();
+    render();
+  }
 
   if (action === "openProfileView") {
     openProfileView(btn.dataset.view);
@@ -283,6 +424,104 @@ function openProfileView(view) {
     .forEach(v => (v.hidden = v.dataset.profileView !== view));
   state.ui.profileView = view;
   save();
+}
+/* =====================
+   DOM REFERENCES
+===================== */
+
+const hudMoney = document.getElementById("hudMoney");
+const hudLevel = document.getElementById("hudLevel");
+const hudTitle = document.getElementById("hudTitle");
+
+const systemBanner = document.getElementById("systemBanner");
+
+const profileAvatar = document.getElementById("profileAvatar");
+const profileName = document.getElementById("profileName");
+const profileTitleBadge = document.getElementById("profileTitleBadge");
+const profileSpecBadge = document.getElementById("profileSpecBadge");
+
+const xpText = document.getElementById("xpText");
+const xpBar = document.getElementById("xpBar");
+const energyText = document.getElementById("energyText");
+const energyBar = document.getElementById("energyBar");
+const healthText = document.getElementById("healthText");
+const healthBar = document.getElementById("healthBar");
+
+const statLevel = document.getElementById("statLevel");
+const statAtk = document.getElementById("statAtk");
+const statDef = document.getElementById("statDef");
+const statIncome = document.getElementById("statIncome");
+const statJail = document.getElementById("statJail");
+const statKO = document.getElementById("statKO");
+
+const activityLog = document.getElementById("activityLog");
+
+const pageCrimes = document.getElementById("page-crimes");
+/* =====================
+   CRIMES PAGE RENDER
+===================== */
+
+function renderCrimesPage() {
+  const jailed = isJailed();
+  const ko = isKO();
+
+  let header = `
+    <div class="card">
+      <div class="section-title">Crimes</div>
+      <div class="muted">
+        Spend energy to commit crimes. Higher crimes are riskier.
+      </div>
+      <div class="hr"></div>
+      <div class="muted">
+        Status: ${
+          jailed
+            ? "🚔 In Jail"
+            : ko
+              ? "💫 KO (heal first)"
+              : "✅ Free"
+        }
+      </div>
+    </div>
+  `;
+
+  const rows = CRIMES.map(c => {
+    const locked = state.player.level < c.unlock;
+    const disabled = jailed || ko || locked || state.player.energy < c.energy;
+
+    const tag = locked
+      ? `<span class="tag">Unlock Lv ${c.unlock}</span>`
+      : `<span class="tag">Energy ${c.energy}</span>`;
+
+    const risk = `<span class="tag">Success ${pct(c.success)}%</span>
+                  <span class="tag">Jail ${pct(c.jail)}%</span>`;
+
+    return `
+      <div class="row">
+        <div class="row__left">
+          <div class="row__title">${c.name}</div>
+          <div class="row__sub">+$${c.money[0]}–$${c.money[1]} • +${c.xp} XP • HP loss on fail</div>
+        </div>
+        <div class="row__right">
+          ${tag}
+          ${risk}
+          <button class="btn ${disabled ? "btn--secondary" : "btn--danger"} btn--small"
+                  data-action="doCrime" data-crime="${c.id}"
+                  ${disabled ? "disabled" : ""}>
+            Do Crime
+          </button>
+        </div>
+      </div>
+    `;
+  }).join("");
+
+  pageCrimes.innerHTML = `
+    <div class="grid">
+      ${header}
+      <div class="card">
+        <div class="list">${rows}</div>
+      </div>
+    </div>
+  `;
 }
 
 /* =====================
@@ -316,6 +555,7 @@ function renderProfile() {
   statLevel.textContent = state.player.level;
   statAtk.textContent = state.player.attack;
   statDef.textContent = state.player.defense;
+  statIncome.textContent = "$0/hr";
   statJail.textContent = isJailed() ? "Yes" : "No";
   statKO.textContent = isKO() ? "Yes" : "No";
 
@@ -338,12 +578,13 @@ function updateTitle() {
 /* =====================
    MAIN RENDER LOOP
 ===================== */
-
+  
 function render() {
   applyRegen();
   updateTitle();
   renderHUD();
   renderProfile();
+  renderCrimesPage();
 
   // disable tabs if jailed / KO
   navButtons.forEach(btn => {
