@@ -1,8 +1,8 @@
 /* =========================================================
    Underworld – Mafia Wars–style Web Game
    app.js (Specializations DISABLED for now)
+   Properties Step 1 + Step 2 INCLUDED
    Compatible with your index.html + styles.css
-   GitHub Pages safe (localStorage only)
    ========================================================= */
 
 "use strict";
@@ -21,6 +21,9 @@ const MS = {
 
 const REGEN_INTERVAL = 5 * MS.MIN;             // 1 energy/health per 5 minutes
 const BLACK_MARKET_REFRESH = 45 * MS.MIN;      // black market refresh every 45 min
+
+// PROPERTIES
+const PROPERTY_OFFLINE_CAP = 4 * MS.HOUR;      // offline income cap
 
 /* =====================
    TITLES / REPUTATION
@@ -56,30 +59,28 @@ function pct(n) {
 
 /* =====================
    CRIMES (15)
-   - 1 energy every 5 minutes
-   - Jail is 2–10 minutes depending on crime
 ===================== */
 
 const CRIMES = [
-  { id:"pickpocket",    name:"Pickpocket",          unlock:1, energy:2, success:0.86, jail:0.06, money:[40,90],     xp:8,  hpLoss:[0,1],  jailMin:2, jailMax:3 },
-  { id:"shoplift",      name:"Shoplift",            unlock:2, energy:2, success:0.83, jail:0.07, money:[55,120],    xp:10, hpLoss:[0,2],  jailMin:2, jailMax:4 },
-  { id:"mug_tourist",   name:"Mug a Tourist",       unlock:3, energy:3, success:0.80, jail:0.08, money:[85,170],    xp:12, hpLoss:[1,3],  jailMin:3, jailMax:4 },
+  { id:"pickpocket",    name:"Pickpocket",          unlock:1, energy:2, success:0.86, jail:0.06, money:[40,90],      xp:8,  hpLoss:[0,1],  jailMin:2, jailMax:3 },
+  { id:"shoplift",      name:"Shoplift",            unlock:2, energy:2, success:0.83, jail:0.07, money:[55,120],     xp:10, hpLoss:[0,2],  jailMin:2, jailMax:4 },
+  { id:"mug_tourist",   name:"Mug a Tourist",       unlock:3, energy:3, success:0.80, jail:0.08, money:[85,170],     xp:12, hpLoss:[1,3],  jailMin:3, jailMax:4 },
 
-  { id:"carjacking",    name:"Carjacking",          unlock:4, energy:4, success:0.76, jail:0.10, money:[140,260],   xp:16, hpLoss:[2,4],  jailMin:3, jailMax:5 },
-  { id:"home_burglary", name:"Home Burglary",       unlock:5, energy:4, success:0.74, jail:0.11, money:[170,320],   xp:18, hpLoss:[2,5],  jailMin:4, jailMax:6 },
-  { id:"street_scam",   name:"Street Scam",         unlock:6, energy:5, success:0.72, jail:0.12, money:[200,380],   xp:20, hpLoss:[2,5],  jailMin:4, jailMax:6 },
+  { id:"carjacking",    name:"Carjacking",          unlock:4, energy:4, success:0.76, jail:0.10, money:[140,260],    xp:16, hpLoss:[2,4],  jailMin:3, jailMax:5 },
+  { id:"home_burglary", name:"Home Burglary",       unlock:5, energy:4, success:0.74, jail:0.11, money:[170,320],    xp:18, hpLoss:[2,5],  jailMin:4, jailMax:6 },
+  { id:"street_scam",   name:"Street Scam",         unlock:6, energy:5, success:0.72, jail:0.12, money:[200,380],    xp:20, hpLoss:[2,5],  jailMin:4, jailMax:6 },
 
-  { id:"armed_robbery", name:"Armed Robbery",       unlock:7, energy:6, success:0.68, jail:0.14, money:[320,520],   xp:26, hpLoss:[3,6],  jailMin:5, jailMax:7 },
-  { id:"bank_runner",   name:"Bank Runner Job",     unlock:8, energy:6, success:0.66, jail:0.15, money:[360,600],   xp:28, hpLoss:[3,7],  jailMin:5, jailMax:7 },
-  { id:"warehouse_hit", name:"Warehouse Hit",       unlock:9, energy:7, success:0.64, jail:0.16, money:[420,720],   xp:30, hpLoss:[4,8],  jailMin:6, jailMax:8 },
-  { id:"vip_extortion", name:"VIP Extortion",       unlock:10,energy:7, success:0.62, jail:0.17, money:[480,840],   xp:32, hpLoss:[4,8],  jailMin:6, jailMax:8 },
+  { id:"armed_robbery", name:"Armed Robbery",       unlock:7, energy:6, success:0.68, jail:0.14, money:[320,520],    xp:26, hpLoss:[3,6],  jailMin:5, jailMax:7 },
+  { id:"bank_runner",   name:"Bank Runner Job",     unlock:8, energy:6, success:0.66, jail:0.15, money:[360,600],    xp:28, hpLoss:[3,7],  jailMin:5, jailMax:7 },
+  { id:"warehouse_hit", name:"Warehouse Hit",       unlock:9, energy:7, success:0.64, jail:0.16, money:[420,720],    xp:30, hpLoss:[4,8],  jailMin:6, jailMax:8 },
+  { id:"vip_extortion", name:"VIP Extortion",       unlock:10,energy:7, success:0.62, jail:0.17, money:[480,840],    xp:32, hpLoss:[4,8],  jailMin:6, jailMax:8 },
 
-  { id:"casino_scam",   name:"Casino Scam",         unlock:11,energy:8, success:0.60, jail:0.18, money:[650,1050],  xp:38, hpLoss:[5,9],  jailMin:7, jailMax:9 },
-  { id:"armored_van",   name:"Armored Van Job",     unlock:12,energy:8, success:0.58, jail:0.20, money:[720,1200],  xp:40, hpLoss:[5,10], jailMin:7, jailMax:10 },
-  { id:"dock_heist",    name:"Dockside Heist",      unlock:13,energy:9, success:0.56, jail:0.21, money:[820,1400],  xp:44, hpLoss:[6,10], jailMin:8, jailMax:10 },
-  { id:"nightclub_take",name:"Nightclub Takeover",  unlock:14,energy:9, success:0.54, jail:0.22, money:[900,1600],  xp:46, hpLoss:[6,11], jailMin:8, jailMax:10 },
+  { id:"casino_scam",   name:"Casino Scam",         unlock:11,energy:8, success:0.60, jail:0.18, money:[650,1050],   xp:38, hpLoss:[5,9],  jailMin:7, jailMax:9 },
+  { id:"armored_van",   name:"Armored Van Job",     unlock:12,energy:8, success:0.58, jail:0.20, money:[720,1200],   xp:40, hpLoss:[5,10], jailMin:7, jailMax:10 },
+  { id:"dock_heist",    name:"Dockside Heist",      unlock:13,energy:9, success:0.56, jail:0.21, money:[820,1400],   xp:44, hpLoss:[6,10], jailMin:8, jailMax:10 },
+  { id:"nightclub_take",name:"Nightclub Takeover",  unlock:14,energy:9, success:0.54, jail:0.22, money:[900,1600],   xp:46, hpLoss:[6,11], jailMin:8, jailMax:10 },
 
-  { id:"high_society",  name:"High Society Sting",  unlock:16,energy:10,success:0.52, jail:0.24, money:[1100,1900], xp:52, hpLoss:[7,12], jailMin:9, jailMax:10 },
+  { id:"high_society",  name:"High Society Sting",  unlock:16,energy:10,success:0.52, jail:0.24, money:[1100,1900],  xp:52, hpLoss:[7,12], jailMin:9, jailMax:10 },
 ];
 
 /* =====================
@@ -87,21 +88,21 @@ const CRIMES = [
 ===================== */
 
 const ENEMIES = [
-  { id:"thug",      name:"Street Thug",        unlock:1,  energy:3, atk:1, def:1, hp:6,  money:[60,120],  xp:10, rep:1 },
-  { id:"brawler",   name:"Back-Alley Brawler", unlock:2,  energy:3, atk:2, def:1, hp:7,  money:[80,150],  xp:12, rep:1 },
-  { id:"hustler",   name:"Corner Hustler",     unlock:3,  energy:4, atk:2, def:2, hp:8,  money:[110,200], xp:14, rep:1 },
-  { id:"enforcer",  name:"Local Enforcer",     unlock:5,  energy:4, atk:3, def:2, hp:10, money:[160,280], xp:18, rep:2 },
-  { id:"crew",      name:"Crew Muscle",        unlock:7,  energy:5, atk:4, def:3, hp:12, money:[220,380], xp:24, rep:2 },
-  { id:"hitman",    name:"Contract Hitman",    unlock:9,  energy:6, atk:5, def:4, hp:14, money:[300,520], xp:30, rep:3 },
-  { id:"captain",   name:"Gang Captain",       unlock:11, energy:6, atk:6, def:5, hp:16, money:[380,680], xp:34, rep:3 },
-  { id:"bossguard", name:"Boss Bodyguard",     unlock:13, energy:7, atk:7, def:6, hp:18, money:[520,900], xp:40, rep:4 },
-  { id:"underboss", name:"Underboss Shadow",   unlock:15, energy:7, atk:8, def:7, hp:20, money:[650,1100],xp:46, rep:4 },
+  { id:"thug",      name:"Street Thug",        unlock:1,  energy:3, atk:1, def:1, hp:6,  money:[60,120],   xp:10, rep:1 },
+  { id:"brawler",   name:"Back-Alley Brawler", unlock:2,  energy:3, atk:2, def:1, hp:7,  money:[80,150],   xp:12, rep:1 },
+  { id:"hustler",   name:"Corner Hustler",     unlock:3,  energy:4, atk:2, def:2, hp:8,  money:[110,200],  xp:14, rep:1 },
+  { id:"enforcer",  name:"Local Enforcer",     unlock:5,  energy:4, atk:3, def:2, hp:10, money:[160,280],  xp:18, rep:2 },
+  { id:"crew",      name:"Crew Muscle",        unlock:7,  energy:5, atk:4, def:3, hp:12, money:[220,380],  xp:24, rep:2 },
+  { id:"hitman",    name:"Contract Hitman",    unlock:9,  energy:6, atk:5, def:4, hp:14, money:[300,520],  xp:30, rep:3 },
+  { id:"captain",   name:"Gang Captain",       unlock:11, energy:6, atk:6, def:5, hp:16, money:[380,680],  xp:34, rep:3 },
+  { id:"bossguard", name:"Boss Bodyguard",     unlock:13, energy:7, atk:7, def:6, hp:18, money:[520,900],  xp:40, rep:4 },
+  { id:"underboss", name:"Underboss Shadow",   unlock:15, energy:7, atk:8, def:7, hp:20, money:[650,1100], xp:46, rep:4 },
 ];
 
 const RIVALS = [
-  { id:"vince", name:"Vince 'Knuckles' Romano", unlock:4,  energy:6, atk:5, def:4, hp:16, money:[260,520],  xp:32, repMilestone:[4,6,10] },
-  { id:"nyla",  name:"Nyla 'Switchblade' Cruz", unlock:8,  energy:7, atk:7, def:6, hp:20, money:[420,780],  xp:44, repMilestone:[6,8,12] },
-  { id:"marco", name:"Marco 'The Fixer' Valli", unlock:12, energy:8, atk:9, def:8, hp:24, money:[620,1100], xp:58, repMilestone:[8,10,14] },
+  { id:"vince", name:"Vince 'Knuckles' Romano", unlock:4,  energy:6, atk:5, def:4, hp:16, money:[260,520],   xp:32, repMilestone:[4,6,10] },
+  { id:"nyla",  name:"Nyla 'Switchblade' Cruz", unlock:8,  energy:7, atk:7, def:6, hp:20, money:[420,780],   xp:44, repMilestone:[6,8,12] },
+  { id:"marco", name:"Marco 'The Fixer' Valli", unlock:12, energy:8, atk:9, def:8, hp:24, money:[620,1100],  xp:58, repMilestone:[8,10,14] },
 ];
 
 /* =====================
@@ -126,12 +127,12 @@ const SHOP_FOOD = [
 ];
 
 const SHOP_HEALING = [
-  { id:"bandage", name:"🩹 Bandage",      desc:"+3 Health",  price:70,  health:3 },
-  { id:"medkit",  name:"🧰 Med Kit",      desc:"+6 Health",  price:140, health:6 },
-  { id:"stims",   name:"💉 Stims",        desc:"+9 Health",  price:220, health:9 },
-  { id:"clinic",  name:"🏥 Clinic Visit", desc:"+12 Health", price:320, health:12 },
-  { id:"surgery", name:"🧑‍⚕️ Surgery",     desc:"+18 Health", price:520, health:18 },
-  { id:"revive",  name:"⚡ Revive Shot",  desc:"+25 Health", price:780, health:25 },
+  { id:"bandage", name:"🩹 Bandage",       desc:"+3 Health",  price:70,  health:3 },
+  { id:"medkit",  name:"🧰 Med Kit",       desc:"+6 Health",  price:140, health:6 },
+  { id:"stims",   name:"💉 Stims",         desc:"+9 Health",  price:220, health:9 },
+  { id:"clinic",  name:"🏥 Clinic Visit",  desc:"+12 Health", price:320, health:12 },
+  { id:"surgery", name:"🧑‍⚕️ Surgery",      desc:"+18 Health", price:520, health:18 },
+  { id:"revive",  name:"⚡ Revive Shot",   desc:"+25 Health", price:780, health:25 },
 ];
 
 /* =====================
@@ -154,6 +155,100 @@ const ARMOR = [
   { id:"plate",   name:"🛡️ Plate Carrier",     price:980,  def:6 },
   { id:"riot",    name:"🛡️ Riot Armor",        price:1500, def:8 },
 ];
+
+/* =====================
+   PROPERTIES (Step 1)
+===================== */
+
+const PROPERTIES = [
+  {
+    id: "stash_house",
+    name: "🧳 Stash House",
+    desc: "Low-key income. Small training edge.",
+    buyPrice: 600,
+    baseIncomePerHour: 35,
+    upgradeBaseCost: 350,
+    trainingBoostPerLevel: 0.005,
+    maxLevel: 10,
+  },
+  {
+    id: "corner_store",
+    name: "🏪 Corner Store",
+    desc: "Steady cashflow with upgrades.",
+    buyPrice: 1400,
+    baseIncomePerHour: 80,
+    upgradeBaseCost: 700,
+    trainingBoostPerLevel: 0.004,
+    maxLevel: 12,
+  },
+  {
+    id: "nightclub",
+    name: "🪩 Nightclub",
+    desc: "Higher income. A bit riskier (later).",
+    buyPrice: 4200,
+    baseIncomePerHour: 220,
+    upgradeBaseCost: 1600,
+    trainingBoostPerLevel: 0.003,
+    maxLevel: 15,
+  },
+  {
+    id: "warehouse",
+    name: "🏭 Warehouse",
+    desc: "Big operations, bigger income.",
+    buyPrice: 9500,
+    baseIncomePerHour: 520,
+    upgradeBaseCost: 3200,
+    trainingBoostPerLevel: 0.002,
+    maxLevel: 18,
+  },
+];
+
+/* =====================
+   PROPERTIES — INCOME ENGINE (Step 2)
+===================== */
+
+function getOwnedPropertyLevel(propId) {
+  return state.properties?.owned?.[propId]?.level || 0; // 0 = not owned
+}
+
+function getTotalIncomePerHour() {
+  let total = 0;
+  for (const p of PROPERTIES) {
+    const lvl = getOwnedPropertyLevel(p.id);
+    if (lvl > 0) total += p.baseIncomePerHour * lvl;
+  }
+  return total;
+}
+
+function applyPropertyIncome() {
+  if (!state.properties) return;
+
+  const now = Date.now();
+  const last = state.properties.lastIncomeAt || now;
+
+  const elapsed = Math.min(Math.max(0, now - last), PROPERTY_OFFLINE_CAP);
+
+  const wholeMinutes = Math.floor(elapsed / MS.MIN);
+  if (wholeMinutes <= 0) return;
+
+  const incomePerHour = getTotalIncomePerHour();
+  if (incomePerHour <= 0) {
+    state.properties.lastIncomeAt = last + wholeMinutes * MS.MIN;
+    return;
+  }
+
+  const incomePerMinute = incomePerHour / 60;
+  const payout = Math.floor(incomePerMinute * wholeMinutes);
+
+  state.properties.lastIncomeAt = last + wholeMinutes * MS.MIN;
+
+  if (payout > 0) {
+    state.player.money += payout;
+    if (wholeMinutes >= 5) {
+      addLog(`🏠 Property income: +$${payout} (${wholeMinutes} min)`);
+    }
+  }
+}
 /* =====================
    DEFAULT GAME STATE
 ===================== */
@@ -196,6 +291,13 @@ function defaultState() {
       nextRefreshAt: now + BLACK_MARKET_REFRESH,
       offerWeapon: null,
     },
+
+    // PROPERTIES (Step 1)
+    properties: {
+      lastIncomeAt: now,
+      owned: {},
+    },
+
     rivals: { defeatedCounts: {} },
     ui: {
       page: "crimes",
@@ -267,6 +369,11 @@ function sanitize(s) {
     nextRefreshAt: Date.now() + BLACK_MARKET_REFRESH,
     offerWeapon: null,
   };
+
+  // PROPERTIES (Step 1 + Step 2 safety)
+  s.properties = s.properties || {};
+  if (typeof s.properties.lastIncomeAt !== "number") s.properties.lastIncomeAt = Date.now();
+  s.properties.owned = s.properties.owned || {};
 
   s.rivals = s.rivals || { defeatedCounts: {} };
 
@@ -694,7 +801,7 @@ function doFight(kind, id) {
 ===================== */
 
 function propertyTrainingBonus() {
-  return 0; // properties later
+  return 0; // training boost later
 }
 
 function msToClock(ms) {
@@ -762,7 +869,7 @@ const hudTitle = document.getElementById("hudTitle");
 const profileAvatar = document.getElementById("profileAvatar");
 const profileName = document.getElementById("profileName");
 const profileTitleBadge = document.getElementById("profileTitleBadge");
-const profileSpecBadge = document.getElementById("profileSpecBadge"); // still exists in HTML; we set a placeholder
+const profileSpecBadge = document.getElementById("profileSpecBadge");
 
 const xpText = document.getElementById("xpText");
 const xpBar = document.getElementById("xpBar");
@@ -785,9 +892,11 @@ const pageFights = document.getElementById("page-fights");
 const pageGym = document.getElementById("page-gym");
 const pageShop = document.getElementById("page-shop");
 const pageArms = document.getElementById("page-arms");
+const pageProperties = document.getElementById("page-properties");
 
 const profileInventoryBox = document.getElementById("profileInventory");
 const profileGearBox = document.getElementById("profileGear");
+const profilePropsBox = document.getElementById("profileProps");
 
 /* =====================
    NAVIGATION
@@ -805,622 +914,152 @@ function showPage(id) {
   save();
 }
 
-/* Reliable nav: event delegation */
 const topNav = document.getElementById("topNav");
-if (topNav) {
-  topNav.addEventListener("click", (e) => {
-    const b = e.target.closest(".nav__btn");
-    if (!b) return;
-    if (b.disabled) return;
-    const route = b.dataset.route;
-    if (!route) return;
-    showPage(route);
-    render();
-  });
-}
+topNav.addEventListener("click", e => {
+  const btn = e.target.closest(".nav__btn");
+  if (!btn || btn.disabled) return;
+  showPage(btn.dataset.route);
+  render();
+});
 
 /* =====================
    PROFILE SUBVIEWS
 ===================== */
 
 function openProfileView(view) {
-  document
-    .querySelectorAll("[data-profile-view]")
-    .forEach(v => (v.hidden = v.dataset.profileView !== view));
+  document.querySelectorAll("[data-profile-view]").forEach(v => {
+    v.hidden = v.dataset.profileView !== view;
+  });
   state.ui.profileView = view;
   save();
 }
 
 /* =====================
-   CLICK HANDLER (ACTIONS)
-   NOTE: specialization/pickSpec removed
+   CLICK HANDLER
 ===================== */
 
 document.body.addEventListener("click", e => {
   const btn = e.target.closest("[data-action]");
   if (!btn) return;
 
-  const action = btn.dataset.action;
+  const a = btn.dataset.action;
 
-  if (action === "openProfileView") {
+  if (a === "openProfileView") {
     openProfileView(btn.dataset.view);
-    render();
-    return;
+  }
+  if (a === "doCrime") doCrime(btn.dataset.crime);
+  if (a === "doFight") doFight(btn.dataset.kind, btn.dataset.fight);
+  if (a === "doGym") doGym(btn.dataset.stat);
+  if (a === "buyShop") buyShopItem(btn.dataset.kind, btn.dataset.item);
+  if (a === "useInv") invUse(btn.dataset.item);
+  if (a === "buyArms") buyArms(btn.dataset.kind, btn.dataset.item);
+  if (a === "buyBM") buyArms("weapon", null, "blackmarket");
+  if (a === "equipWeapon") equipWeaponByIndex(+btn.dataset.idx);
+  if (a === "equipArmor") equipArmorByIndex(+btn.dataset.idx);
+
+  if (a === "hardReset" && confirm("Reset all progress?")) {
+    localStorage.removeItem(SAVE_KEY);
+    location.reload();
   }
 
-  if (action === "doCrime") {
-    doCrime(btn.dataset.crime);
-    save();
-    render();
-    return;
-  }
-
-  if (action === "doFight") {
-    doFight(btn.dataset.kind, btn.dataset.fight);
-    save();
-    render();
-    return;
-  }
-
-  if (action === "doGym") {
-    doGym(btn.dataset.stat);
-    save();
-    render();
-    return;
-  }
-
-  if (action === "buyShop") {
-    buyShopItem(btn.dataset.kind, btn.dataset.item);
-    save();
-    render();
-    return;
-  }
-
-  if (action === "useInv") {
-    invUse(btn.dataset.item);
-    save();
-    render();
-    return;
-  }
-
-  if (action === "buyArms") {
-    buyArms(btn.dataset.kind, btn.dataset.item, "arms");
-    save();
-    render();
-    return;
-  }
-
-  if (action === "buyBM") {
-    buyArms("weapon", null, "blackmarket");
-    save();
-    render();
-    return;
-  }
-
-  if (action === "equipWeapon") {
-    equipWeaponByIndex(Number(btn.dataset.idx));
-    save();
-    render();
-    return;
-  }
-
-  if (action === "equipArmor") {
-    equipArmorByIndex(Number(btn.dataset.idx));
-    save();
-    render();
-    return;
-  }
-
-  if (action === "hardReset") {
-    if (confirm("Reset all progress?")) {
-      localStorage.removeItem(SAVE_KEY);
-      location.reload();
-    }
-  }
+  save();
+  render();
 });
 
 /* =====================
-   HUD + PROFILE RENDER
+   RENDER HUD + PROFILE
 ===================== */
 
 function renderHUD() {
-  if (hudMoney) hudMoney.textContent = `$${state.player.money}`;
-  if (hudLevel) hudLevel.textContent = `Lv ${state.player.level}`;
-  if (hudTitle) hudTitle.textContent = state.player.title;
+  hudMoney.textContent = `$${state.player.money}`;
+  hudLevel.textContent = `Lv ${state.player.level}`;
+  hudTitle.textContent = state.player.title;
 }
 
 function renderProfile() {
-  if (profileAvatar) profileAvatar.textContent = state.player.avatar;
-  if (profileName) profileName.textContent = state.player.name;
-  if (profileTitleBadge) profileTitleBadge.textContent = state.player.title;
-  if (profileSpecBadge) profileSpecBadge.textContent = "No Specialization";
+  profileAvatar.textContent = state.player.avatar;
+  profileName.textContent = state.player.name;
+  profileTitleBadge.textContent = state.player.title;
+  profileSpecBadge.textContent = "No Specialization";
 
-  const xpNeed = state.player.level * 100;
-  if (xpText) xpText.textContent = `${state.player.xp} / ${xpNeed}`;
-  if (xpBar) xpBar.style.width = `${clamp((state.player.xp / xpNeed) * 100, 0, 100)}%`;
+  const xpNeed = xpNeededForLevel(state.player.level);
+  xpText.textContent = `${state.player.xp} / ${xpNeed}`;
+  xpBar.style.width = `${(state.player.xp / xpNeed) * 100}%`;
 
-  if (energyText) energyText.textContent = `${state.player.energy}/${state.player.maxEnergy}`;
-  if (energyBar) energyBar.style.width = (state.player.energy / state.player.maxEnergy) * 100 + "%";
+  energyText.textContent = `${state.player.energy}/${state.player.maxEnergy}`;
+  energyBar.style.width = `${(state.player.energy / state.player.maxEnergy) * 100}%`;
 
-  if (healthText) healthText.textContent = `${state.player.health}/${state.player.maxHealth}`;
-  if (healthBar) healthBar.style.width = (state.player.health / state.player.maxHealth) * 100 + "%";
+  healthText.textContent = `${state.player.health}/${state.player.maxHealth}`;
+  healthBar.style.width = `${(state.player.health / state.player.maxHealth) * 100}%`;
 
-  if (statLevel) statLevel.textContent = state.player.level;
-  if (statAtk) statAtk.textContent = state.player.attack;
-  if (statDef) statDef.textContent = state.player.defense;
-  if (statIncome) statIncome.textContent = "$0/hr";
-  if (statJail) statJail.textContent = isJailed() ? "Yes" : "No";
-  if (statKO) statKO.textContent = isKO() ? "Yes" : "No";
+  statLevel.textContent = state.player.level;
+  statAtk.textContent = state.player.attack;
+  statDef.textContent = state.player.defense;
 
-  if (activityLog) activityLog.innerHTML = state.ui.log.join("<br>");
+  // PROPERTIES (Step 2)
+  statIncome.textContent = `$${getTotalIncomePerHour()}/hr`;
 
-  openProfileView(state.ui.profileView || "overview");
+  statJail.textContent = isJailed() ? "Yes" : "No";
+  statKO.textContent = isKO() ? "Yes" : "No";
+
+  activityLog.innerHTML = state.ui.log.join("<br>");
+  openProfileView(state.ui.profileView);
 }
 
 /* =====================
-   PROFILE: INVENTORY + GEAR RENDER
+   PLACEHOLDER: PROPERTIES PAGE
+===================== */
+
+function renderPropertiesPage() {
+  pageProperties.innerHTML = `
+    <div class="card">
+      <div class="section-title">Properties</div>
+      <div class="muted">
+        Buy and upgrade properties for passive income.<br>
+        (Income engine is live. Buying/Upgrading comes next.)
+      </div>
+    </div>
+  `;
+}
+
+/* =====================
+   PROFILE INVENTORY / GEAR
 ===================== */
 
 function renderProfileInventory() {
-  const inv = state.inventory || {};
-  const ids = Object.keys(inv);
-
   if (!profileInventoryBox) return;
+  const inv = Object.values(state.inventory);
 
-  if (ids.length === 0) {
-    profileInventoryBox.innerHTML = `<div class="muted">Your inventory is empty.</div>`;
+  if (!inv.length) {
+    profileInventoryBox.innerHTML = `<div class="muted">Inventory empty.</div>`;
     return;
   }
 
-  const rows = ids
-    .map(id => inv[id])
-    .sort((a, b) => (a.type > b.type ? 1 : -1))
-    .map(it => {
-      const canUse =
-        (it.energy > 0 && state.player.energy < state.player.maxEnergy) ||
-        (it.health > 0 && state.player.health < state.player.maxHealth);
-
-      return `
+  profileInventoryBox.innerHTML = `
+    <div class="list">
+      ${inv.map(it => `
         <div class="row">
           <div class="row__left">
             <div class="row__title">${it.name} ×${it.quantity}</div>
-            <div class="row__sub">
-              ${it.energy ? `+${it.energy} Energy` : ""}${it.energy && it.health ? " • " : ""}${it.health ? `+${it.health} Health` : ""}
-            </div>
           </div>
           <div class="row__right">
-            <span class="tag">${it.type}</span>
-            <button class="btn ${canUse ? "btn--primary" : "btn--secondary"} btn--small"
-              data-action="useInv" data-item="${it.id}" ${canUse ? "" : "disabled"}>
+            <button class="btn btn--small btn--primary"
+              data-action="useInv" data-item="${it.id}">
               Use
             </button>
           </div>
         </div>
-      `;
-    }).join("");
-
-  profileInventoryBox.innerHTML = `<div class="list">${rows}</div>`;
+      `).join("")}
+    </div>
+  `;
 }
 
 function renderProfileGear() {
   if (!profileGearBox) return;
 
-  const eqW = state.equipment?.weapon;
-  const eqA = state.equipment?.armor;
-
-  const weapons = state.gear?.weapons || [];
-  const armor = state.gear?.armor || [];
-
-  const equippedHtml = `
-    <div class="row">
-      <div class="row__left">
-        <div class="row__title">Equipped Weapon</div>
-        <div class="row__sub">${eqW ? `${eqW.name} • ATK +${eqW.atk}` : "None"}</div>
-      </div>
-      <div class="row__right">
-        ${eqW?.rarity === "gold" ? `<span class="tag tag--gold">GOLD</span>` : eqW?.rarity ? `<span class="tag">${eqW.rarity}</span>` : ``}
-      </div>
-    </div>
-    <div class="row">
-      <div class="row__left">
-        <div class="row__title">Equipped Armor</div>
-        <div class="row__sub">${eqA ? `${eqA.name} • DEF +${eqA.def}` : "None"}</div>
-      </div>
-      <div class="row__right">
-        ${eqA?.rarity === "gold" ? `<span class="tag tag--gold">GOLD</span>` : eqA?.rarity ? `<span class="tag">${eqA.rarity}</span>` : ``}
-      </div>
-    </div>
-  `;
-
-  const weaponRows = weapons.length
-    ? weapons.map((w, idx) => `
-        <div class="row">
-          <div class="row__left">
-            <div class="row__title">${w.name}</div>
-            <div class="row__sub">ATK +${w.atk}</div>
-          </div>
-          <div class="row__right">
-            ${w.rarity === "gold" ? `<span class="tag tag--gold">GOLD</span>` : `<span class="tag">${w.rarity}</span>`}
-            <button class="btn btn--primary btn--small" data-action="equipWeapon" data-idx="${idx}">Equip</button>
-          </div>
-        </div>
-      `).join("")
-    : `<div class="muted">No weapons owned yet.</div>`;
-
-  const armorRows = armor.length
-    ? armor.map((a, idx) => `
-        <div class="row">
-          <div class="row__left">
-            <div class="row__title">${a.name}</div>
-            <div class="row__sub">DEF +${a.def}</div>
-          </div>
-          <div class="row__right">
-            <span class="tag">${a.rarity}</span>
-            <button class="btn btn--success btn--small" data-action="equipArmor" data-idx="${idx}">Equip</button>
-          </div>
-        </div>
-      `).join("")
-    : `<div class="muted">No armor owned yet.</div>`;
-
   profileGearBox.innerHTML = `
-    <div class="list">
-      ${equippedHtml}
-      <div class="hr"></div>
-      <div class="section-title">Owned Weapons</div>
-      ${weaponRows}
-      <div class="hr"></div>
-      <div class="section-title">Owned Armor</div>
-      ${armorRows}
-    </div>
-  `;
-}
-
-/* =====================
-   PAGES RENDER
-===================== */
-
-function renderCrimesPage() {
-  const jailed = isJailed();
-  const ko = isKO();
-
-  const header = `
-    <div class="card">
-      <div class="section-title">Crimes</div>
-      <div class="muted">Spend energy to commit crimes. Higher crimes are riskier.</div>
-      <div class="hr"></div>
-      <div class="muted">Status: ${jailed ? "🚔 In Jail" : ko ? "💫 KO (heal first)" : "✅ Free"}</div>
-    </div>
-  `;
-
-  const rows = CRIMES.map(c => {
-    const locked = state.player.level < c.unlock;
-    const disabled = jailed || ko || locked || state.player.energy < c.energy;
-
-    const tag = locked
-      ? `<span class="tag">Unlock Lv ${c.unlock}</span>`
-      : `<span class="tag">Energy ${c.energy}</span>`;
-
-    const risk = `<span class="tag">Success ${pct(c.success)}%</span>
-                  <span class="tag">Jail ${pct(c.jail)}%</span>`;
-
-    return `
-      <div class="row">
-        <div class="row__left">
-          <div class="row__title">${c.name}</div>
-          <div class="row__sub">+$${c.money[0]}–$${c.money[1]} • +${c.xp} XP • HP loss on fail</div>
-        </div>
-        <div class="row__right">
-          ${tag}
-          ${risk}
-          <button class="btn ${disabled ? "btn--secondary" : "btn--danger"} btn--small"
-                  data-action="doCrime" data-crime="${c.id}"
-                  ${disabled ? "disabled" : ""}>
-            Do Crime
-          </button>
-        </div>
-      </div>
-    `;
-  }).join("");
-
-  pageCrimes.innerHTML = `
-    <div class="grid">
-      ${header}
-      <div class="card"><div class="list">${rows}</div></div>
-    </div>
-  `;
-}
-
-function renderFightsPage() {
-  const jailed = isJailed();
-  const ko = isKO();
-
-  const statusText = jailed ? "🚔 In Jail (Fights locked)" : ko ? "💫 KO (Heal first)" : "✅ Ready";
-
-  const enemyRows = ENEMIES.map(e => {
-    const locked = state.player.level < e.unlock;
-    const disabled = jailed || ko || locked || state.player.energy < e.energy;
-
-    return `
-      <div class="row">
-        <div class="row__left">
-          <div class="row__title">${e.name}</div>
-          <div class="row__sub">Lv ${e.unlock}+ • Enemy A/D ${e.atk}/${e.def} • HP ${e.hp}</div>
-        </div>
-        <div class="row__right">
-          ${locked ? `<span class="tag">Unlock Lv ${e.unlock}</span>` : `<span class="tag">Energy ${e.energy}</span>`}
-          <span class="tag">+$${e.money[0]}–$${e.money[1]}</span>
-          <span class="tag">+${e.xp} XP</span>
-          <button class="btn ${disabled ? "btn--secondary" : "btn--primary"} btn--small"
-            data-action="doFight" data-kind="enemy" data-fight="${e.id}" ${disabled ? "disabled" : ""}>
-            Fight
-          </button>
-        </div>
-      </div>
-    `;
-  }).join("");
-
-  const rivalRows = RIVALS.map(r => {
-    const wins = state.rivals?.defeatedCounts?.[r.id] || 0;
-    const locked = state.player.level < r.unlock;
-    const disabled = jailed || ko || locked || state.player.energy < r.energy;
-
-    const milestoneTag =
-      wins >= 5 ? `<span class="tag tag--gold">Dominated</span>` :
-      wins >= 3 ? `<span class="tag">Milestone 3/5</span>` :
-      wins >= 1 ? `<span class="tag">Milestone 1/5</span>` :
-      `<span class="tag">New Rival</span>`;
-
-    return `
-      <div class="row">
-        <div class="row__left">
-          <div class="row__title">${r.name}</div>
-          <div class="row__sub">Lv ${r.unlock}+ • Rival A/D ${r.atk}/${r.def} • HP ${r.hp} • Wins: ${wins}</div>
-        </div>
-        <div class="row__right">
-          ${locked ? `<span class="tag">Unlock Lv ${r.unlock}</span>` : `<span class="tag">Energy ${r.energy}</span>`}
-          ${milestoneTag}
-          <span class="tag">+$${r.money[0]}–$${r.money[1]}</span>
-          <span class="tag">+${r.xp} XP</span>
-          <button class="btn ${disabled ? "btn--secondary" : "btn--danger"} btn--small"
-            data-action="doFight" data-kind="rival" data-fight="${r.id}" ${disabled ? "disabled" : ""}>
-            Challenge
-          </button>
-        </div>
-      </div>
-    `;
-  }).join("");
-
-  pageFights.innerHTML = `
-    <div class="grid">
-      <div class="card">
-        <div class="section-title">Fights</div>
-        <div class="muted">Earn money/XP, but you’ll lose health. No jail from fights.</div>
-        <div class="hr"></div>
-        <div class="muted">Status: ${statusText}</div>
-      </div>
-
-      <div class="card">
-        <div class="section-title">Street Fights</div>
-        <div class="list">${enemyRows}</div>
-      </div>
-
-      <div class="card">
-        <div class="section-title">Rivals</div>
-        <div class="muted">Beat rivals multiple times for reputation milestones.</div>
-        <div class="hr"></div>
-        <div class="list">${rivalRows}</div>
-      </div>
-    </div>
-  `;
-}
-
-function renderGymPage() {
-  const jailed = isJailed();
-  const ko = isKO();
-
-  const gym = jailed ? GYM.jail : GYM.normal;
-
-  const energyCost = gym.energy;
-  const successChance = clamp(gym.success + propertyTrainingBonus(), 0.05, 0.95);
-
-  const jailMsg = jailed
-    ? `<div class="muted">🚔 In Jail — time left: <b>${msToClock(state.timers.jailUntil - Date.now())}</b></div><div class="hr"></div>`
-    : "";
-
-  const statusText = ko ? "💫 KO (Heal first)" : (jailed ? "🚔 Jail Gym Available" : "✅ Normal Gym Available");
-  const disabled = ko || state.player.energy < energyCost;
-
-  pageGym.innerHTML = `
-    <div class="grid">
-      <div class="card">
-        <div class="section-title">${gym.name}</div>
-        ${jailMsg}
-        <div class="muted">Train Attack or Defense. Costs energy. Failing can cost health.</div>
-        <div class="hr"></div>
-        <div class="muted">Status: ${statusText}</div>
-      </div>
-
-      <div class="card">
-        <div class="list">
-          <div class="row">
-            <div class="row__left">
-              <div class="row__title">Train Attack</div>
-              <div class="row__sub">Success ${pct(successChance)}% • +${gym.gain.attack} ATK • +${gym.xp} XP</div>
-            </div>
-            <div class="row__right">
-              <span class="tag">Energy ${energyCost}</span>
-              <button class="btn ${disabled ? "btn--secondary" : "btn--success"} btn--small"
-                data-action="doGym" data-stat="attack" ${disabled ? "disabled" : ""}>
-                Train
-              </button>
-            </div>
-          </div>
-
-          <div class="row">
-            <div class="row__left">
-              <div class="row__title">Train Defense</div>
-              <div class="row__sub">Success ${pct(successChance)}% • +${gym.gain.defense} DEF • +${gym.xp} XP</div>
-            </div>
-            <div class="row__right">
-              <span class="tag">Energy ${energyCost}</span>
-              <button class="btn ${disabled ? "btn--secondary" : "btn--success"} btn--small"
-                data-action="doGym" data-stat="defense" ${disabled ? "disabled" : ""}>
-                Train
-              </button>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-  `;
-}
-
-function renderShopPage() {
-  const foodRows = SHOP_FOOD.map(it => {
-    const disabled = state.player.money < it.price;
-    return `
-      <div class="row">
-        <div class="row__left">
-          <div class="row__title">${it.name}</div>
-          <div class="row__sub">${it.desc}</div>
-        </div>
-        <div class="row__right">
-          <span class="tag">$${it.price}</span>
-          <button class="btn ${disabled ? "btn--secondary" : "btn--primary"} btn--small"
-            data-action="buyShop" data-kind="food" data-item="${it.id}" ${disabled ? "disabled" : ""}>
-            Buy
-          </button>
-        </div>
-      </div>
-    `;
-  }).join("");
-
-  const healRows = SHOP_HEALING.map(it => {
-    const disabled = state.player.money < it.price;
-    return `
-      <div class="row">
-        <div class="row__left">
-          <div class="row__title">${it.name}</div>
-          <div class="row__sub">${it.desc}</div>
-        </div>
-        <div class="row__right">
-          <span class="tag">$${it.price}</span>
-          <button class="btn ${disabled ? "btn--secondary" : "btn--success"} btn--small"
-            data-action="buyShop" data-kind="healing" data-item="${it.id}" ${disabled ? "disabled" : ""}>
-            Buy
-          </button>
-        </div>
-      </div>
-    `;
-  }).join("");
-
-  pageShop.innerHTML = `
-    <div class="grid">
-      <div class="card">
-        <div class="section-title">Shop</div>
-        <div class="muted">Food restores Energy. Healing restores Health. Purchases go to Inventory.</div>
-      </div>
-
-      <div class="card">
-        <div class="section-title">Food (Energy)</div>
-        <div class="list">${foodRows}</div>
-      </div>
-
-      <div class="card">
-        <div class="section-title">Healing</div>
-        <div class="list">${healRows}</div>
-      </div>
-    </div>
-  `;
-}
-
-function renderArmsPage() {
-  refreshBlackMarketIfNeeded();
-
-  const weaponRows = WEAPONS.map(w => {
-    const disabled = state.player.money < w.price;
-    return `
-      <div class="row">
-        <div class="row__left">
-          <div class="row__title">${w.name}</div>
-          <div class="row__sub">Attack +${w.atk}</div>
-        </div>
-        <div class="row__right">
-          <span class="tag">$${w.price}</span>
-          <button class="btn ${disabled ? "btn--secondary" : "btn--primary"} btn--small"
-            data-action="buyArms" data-kind="weapon" data-item="${w.id}" ${disabled ? "disabled" : ""}>
-            Buy
-          </button>
-        </div>
-      </div>
-    `;
-  }).join("");
-
-  const armorRows = ARMOR.map(a => {
-    const disabled = state.player.money < a.price;
-    return `
-      <div class="row">
-        <div class="row__left">
-          <div class="row__title">${a.name}</div>
-          <div class="row__sub">Defense +${a.def}</div>
-        </div>
-        <div class="row__right">
-          <span class="tag">$${a.price}</span>
-          <button class="btn ${disabled ? "btn--secondary" : "btn--success"} btn--small"
-            data-action="buyArms" data-kind="armor" data-item="${a.id}" ${disabled ? "disabled" : ""}>
-            Buy
-          </button>
-        </div>
-      </div>
-    `;
-  }).join("");
-
-  const offer = state.blackMarket?.offerWeapon;
-  const msLeft = Math.max(0, (state.blackMarket?.nextRefreshAt || 0) - Date.now());
-
-  const bmHtml = offer
-    ? `
-      <div class="row">
-        <div class="row__left">
-          <div class="row__title">${offer.name} ${offer.rarity === "gold" ? `<span class="tag tag--gold">GOLD</span>` : ""}</div>
-          <div class="row__sub">Attack +${offer.atk} • Rare Black Market weapon</div>
-        </div>
-        <div class="row__right">
-          <span class="tag">$${offer.price}</span>
-          <button class="btn ${state.player.money < offer.price ? "btn--secondary" : (offer.rarity === "gold" ? "btn--gold" : "btn--danger")} btn--small"
-            data-action="buyBM" ${state.player.money < offer.price ? "disabled" : ""}>
-            Buy
-          </button>
-        </div>
-      </div>
-    `
-    : `<div class="muted">No offer right now (someone bought it). Next refresh will bring a new weapon.</div>`;
-
-  pageArms.innerHTML = `
-    <div class="grid">
-      <div class="card">
-        <div class="section-title">Arms Dealer</div>
-        <div class="muted">Buy weapons and armor. Equip gear from Profile → Weapons & Armor.</div>
-      </div>
-
-      <div class="card">
-        <div class="section-title">Weapons</div>
-        <div class="list">${weaponRows}</div>
-      </div>
-
-      <div class="card">
-        <div class="section-title">Armor</div>
-        <div class="list">${armorRows}</div>
-      </div>
-
-      <div class="card">
-        <div class="section-title">🌑 Black Market</div>
-        <div class="muted">Refreshes every 45 minutes. 1% chance for a <b>GOLD</b> weapon.</div>
-        <div class="hr"></div>
-        <div class="muted">Next refresh: <b>${Math.ceil(msLeft / 60000)} min</b></div>
-        <div class="hr"></div>
-        <div class="list">${bmHtml}</div>
-      </div>
+    <div class="muted">
+      Manage weapons & armor here.
     </div>
   `;
 }
@@ -1431,6 +1070,10 @@ function renderArmsPage() {
 
 function render() {
   applyRegen();
+
+  // PROPERTIES (Step 2)
+  applyPropertyIncome();
+
   updateTitle();
 
   renderHUD();
@@ -1441,29 +1084,22 @@ function render() {
   renderGymPage();
   renderShopPage();
   renderArmsPage();
+  renderPropertiesPage();
 
   renderProfileInventory();
   renderProfileGear();
 
-  // Tab lock rules:
-  // - Crimes + Fights disabled if jailed OR KO
-  // - Gym disabled only if KO (Gym stays usable in jail)
   navButtons.forEach(btn => {
-    const route = btn.dataset.route;
-
-    if (route === "crimes" || route === "fights") {
+    if (btn.dataset.route === "crimes" || btn.dataset.route === "fights") {
       btn.disabled = isJailed() || isKO();
-      return;
-    }
-    if (route === "gym") {
+    } else if (btn.dataset.route === "gym") {
       btn.disabled = isKO();
-      return;
+    } else {
+      btn.disabled = false;
     }
-    btn.disabled = false;
   });
 
-  showPage(state.ui.page || "crimes");
-
+  showPage(state.ui.page);
   save();
 }
 
@@ -1473,4 +1109,3 @@ function render() {
 
 render();
 setInterval(render, 1000);
-
