@@ -4,7 +4,6 @@
    Compatible with your index.html + styles.css
    GitHub Pages safe (localStorage only)
    ========================================================= */
-console.log("✅ app.js LOADED", new Date().toISOString());
 
 "use strict";
 
@@ -27,7 +26,6 @@ const PROPERTY_OFFLINE_CAP = 4 * MS.HOUR;      // (later)
 /* =====================
    SPECIALIZATIONS
 ===================== */
-console.log("✅ pickSpec CLICKED", btn.dataset.spec);
 
 const SPECIALIZATIONS = {
   enforcer: {
@@ -189,7 +187,7 @@ function defaultState() {
     player: {
       name: "Player",
       avatar: "🙂",
-      specialization: null,
+      specialization: null, // unused for now
       level: 1,
       xp: 0,
       money: 500,
@@ -581,9 +579,7 @@ function tryLevelUp() {
 ===================== */
 
 function getSpecMods() {
-  const specId = state.player.specialization;
-  if (!specId) return {};
-  return SPECIALIZATIONS[specId]?.mods || {};
+  return {}; // specializations disabled for now
 }
 
 function equippedAttackBonus() {
@@ -859,12 +855,6 @@ if (topNav) {
   });
 }
 
-/* =====================
-   SPECIALIZATION GATE
-===================== */
-
-const gate = document.getElementById("specGate");
-if (gate) gate.hidden = !!state.player.specialization;
 
 /* =====================
    PROFILE SUBVIEWS
@@ -887,13 +877,6 @@ document.body.addEventListener("click", e => {
   if (!btn) return;
 
   const action = btn.dataset.action;
-
-  /* =====================
-     SPECIALIZATION PICK
-  ===================== */
-  if (action === "pickSpec") {
-    const spec = btn.dataset.spec;
-    if (!spec) return;
 
     // Lock specialization
     state.player.specialization = spec;
@@ -1029,8 +1012,6 @@ function renderProfile() {
   if (profileAvatar) profileAvatar.textContent = state.player.avatar;
   if (profileName) profileName.textContent = state.player.name;
   if (profileTitleBadge) profileTitleBadge.textContent = state.player.title;
-  if (profileSpecBadge) profileSpecBadge.textContent =
-    SPECIALIZATIONS[state.player.specialization]?.name || "None";
 
   const xpNeed = state.player.level * 100;
   if (xpText) xpText.textContent = `${state.player.xp} / ${xpNeed}`;
