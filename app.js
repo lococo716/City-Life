@@ -886,83 +886,125 @@ document.body.addEventListener("click", e => {
 
   const action = btn.dataset.action;
 
+  /* =====================
+     SPECIALIZATION PICK
+  ===================== */
   if (action === "pickSpec") {
     const spec = btn.dataset.spec;
+    if (!spec) return;
+
+    // Lock specialization
     state.player.specialization = spec;
 
-    // hard-hide gate immediately + keep hidden on render
-    const g = document.getElementById("specGate");
-    if (g) g.hidden = true;
+    // Immediately hide the gate
+    const gate = document.getElementById("specGate");
+    if (gate) gate.hidden = true;
 
     addLog(`Chose specialization: ${SPECIALIZATIONS[spec].name}`);
     toast("Specialization locked in");
 
-    // feels responsive: send them to Crimes
-    showPage("crimes");
-
+    // Save + force reload so UI fully remounts
     save();
-    render();
+    location.reload();
+    return;
   }
 
+  /* =====================
+     PROFILE SUBVIEWS
+  ===================== */
   if (action === "openProfileView") {
     openProfileView(btn.dataset.view);
     render();
+    return;
   }
 
+  /* =====================
+     CRIMES
+  ===================== */
   if (action === "doCrime") {
     doCrime(btn.dataset.crime);
     save();
     render();
+    return;
   }
 
+  /* =====================
+     FIGHTS
+  ===================== */
   if (action === "doFight") {
     doFight(btn.dataset.kind, btn.dataset.fight);
     save();
     render();
+    return;
   }
 
+  /* =====================
+     GYM
+  ===================== */
   if (action === "doGym") {
     doGym(btn.dataset.stat);
     save();
     render();
+    return;
   }
 
+  /* =====================
+     SHOP
+  ===================== */
   if (action === "buyShop") {
     buyShopItem(btn.dataset.kind, btn.dataset.item);
     save();
     render();
+    return;
   }
 
+  /* =====================
+     INVENTORY USE
+  ===================== */
   if (action === "useInv") {
     invUse(btn.dataset.item);
     save();
     render();
+    return;
   }
 
+  /* =====================
+     ARMS DEALER
+  ===================== */
   if (action === "buyArms") {
     buyArms(btn.dataset.kind, btn.dataset.item, "arms");
     save();
     render();
+    return;
   }
 
   if (action === "buyBM") {
     buyArms("weapon", null, "blackmarket");
     save();
     render();
+    return;
   }
 
+  /* =====================
+     EQUIP GEAR
+  ===================== */
   if (action === "equipWeapon") {
     equipWeaponByIndex(Number(btn.dataset.idx));
     save();
     render();
+    return;
   }
 
   if (action === "equipArmor") {
     equipArmorByIndex(Number(btn.dataset.idx));
     save();
     render();
+    return;
   }
 
+  /* =====================
+     HARD RESET
+  ===================== */
   if (action === "hardReset") {
     if (confirm("Reset all progress?")) {
       localStorage.removeItem(SAVE_KEY);
