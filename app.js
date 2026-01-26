@@ -1,6 +1,6 @@
 /* =========================================================
    Underworld – Mafia Wars–style Web Game
-   app.js (FULL, up through Arms Dealer + fixes)
+   app.js (Specializations DISABLED for now)
    Compatible with your index.html + styles.css
    GitHub Pages safe (localStorage only)
    ========================================================= */
@@ -19,32 +19,8 @@ const MS = {
   HOUR: 60 * 60 * 1000,
 };
 
-const REGEN_INTERVAL = 5 * MS.MIN;             // 1 per 5 minutes
-const BLACK_MARKET_REFRESH = 45 * MS.MIN;      // black market refresh
-const PROPERTY_OFFLINE_CAP = 4 * MS.HOUR;      // (later)
-
-/* =====================
-   SPECIALIZATIONS
-===================== */
-
-const SPECIALIZATIONS = {
-  enforcer: {
-    name: "Enforcer",
-    mods: { fightDmgOut: 0.1, fightDmgIn: -0.05 },
-  },
-  mastermind: {
-    name: "Mastermind",
-    mods: { crimeSuccess: 0.06, jailRisk: -0.06 },
-  },
-  tycoon: {
-    name: "Tycoon",
-    mods: { propertyIncome: 0.1, propertyUpgradeDiscount: 0.08 },
-  },
-  athlete: {
-    name: "Athlete",
-    mods: { gymSuccess: 0.08, gymEnergyDiscount: 1 },
-  },
-};
+const REGEN_INTERVAL = 5 * MS.MIN;             // 1 energy/health per 5 minutes
+const BLACK_MARKET_REFRESH = 45 * MS.MIN;      // black market refresh every 45 min
 
 /* =====================
    TITLES / REPUTATION
@@ -79,7 +55,9 @@ function pct(n) {
 }
 
 /* =====================
-   CRIMES (15) — level unlocked, higher = riskier
+   CRIMES (15)
+   - 1 energy every 5 minutes
+   - Jail is 2–10 minutes depending on crime
 ===================== */
 
 const CRIMES = [
@@ -187,7 +165,7 @@ function defaultState() {
     player: {
       name: "Player",
       avatar: "🙂",
-      specialization: null, // unused for now
+      specialization: null, // disabled for now
       level: 1,
       xp: 0,
       money: 500,
@@ -204,7 +182,6 @@ function defaultState() {
       lastEnergy: now,
       lastHealth: now,
       jailUntil: null,
-      propertyIncome: now,
     },
     inventory: {},
     equipment: {
@@ -219,7 +196,6 @@ function defaultState() {
       nextRefreshAt: now + BLACK_MARKET_REFRESH,
       offerWeapon: null,
     },
-    properties: {}, // later
     rivals: { defeatedCounts: {} },
     ui: {
       page: "crimes",
@@ -230,7 +206,7 @@ function defaultState() {
 }
 
 /* =====================
-   LOAD / SAVE / SANITIZE
+   LOAD / SAVE
 ===================== */
 
 let state = load();
@@ -255,49 +231,54 @@ function save(s = state) {
   localStorage.setItem(SAVE_KEY, JSON.stringify(s));
 }
 
+/* =====================
+   SANITIZE SAVE
+===================== */
+
 function sanitize(s) {
   const d = defaultState();
   if (!s || !s.schema) return d;
 
-  s.rivals = s.rivals || { defeatedCounts: {} };
-  s.rivals.defeatedCounts = s.rivals.defeatedCounts || {};
-
-  s.ui = s.ui || {};
-  s.ui.log = Array.isArray(s.ui.log) ? s.ui.log : [];
-  s.ui.profileView = s.ui.profileView || "overview";
-  s.ui.page = s.ui.page || "crimes";
-
-  s.inventory = s.inventory || {};
-  s.equipment = s.equipment || { weapon: null, armor: null };
-
-  s.gear = s.gear || { weapons: [], armor: [] };
-  s.gear.weapons = Array.isArray(s.gear.weapons) ? s.gear.weapons : [];
-  s.gear.armor = Array.isArray(s.gear.armor) ? s.gear.armor : [];
-
-  s.blackMarket = s.blackMarket || { nextRefreshAt: Date.now() + BLACK_MARKET_REFRESH, offerWeapon: null };
-  if (typeof s.blackMarket.nextRefreshAt !== "number") s.blackMarket.nextRefreshAt = Date.now() + BLACK_MARKET_REFRESH;
-
   s.player = s.player || d.player;
-  s.player.level = Math.max(1, s.player.level ?? 1);
-  s.player.xp = Math.max(0, s.player.xp ?? 0);
-  s.player.money = Math.max(0, s.player.money ?? 0);
+  s.player.level = Math.max(1, s.player.level || 1);
+  s.player.xp = Math.max(0, s.player.xp || 0);
+  s.player.money = Math.max(0, s.player.money || 0);
 
-  s.player.maxEnergy = Math.max(1, s.player.maxEnergy ?? 10);
-  s.player.maxHealth = Math.max(1, s.player.maxHealth ?? 10);
+  s.player.maxEnergy = Math.max(1, s.player.maxEnergy || 10);
+  s.player.maxHealth = Math.max(1, s.player.maxHealth || 10);
 
   s.player.energy = clamp(s.player.energy ?? 0, 0, s.player.maxEnergy);
   s.player.health = clamp(s.player.health ?? 0, 0, s.player.maxHealth);
 
-  s.player.attack = Math.max(0, s.player.attack ?? 1);
-  s.player.defense = Math.max(0, s.player.defense ?? 1);
+  s.player.attack = Math.max(0, s.player.attack || 1);
+  s.player.defense = Math.max(0, s.player.defense || 1);
 
-  s.player.reputation = Math.max(0, s.player.reputation ?? 0);
+  s.player.reputation = Math.max(0, s.player.reputation || 0);
   s.player.title = s.player.title || "Street Rat";
 
+  s.inventory = s.inventory || {};
+  s.gear = s.gear || { weapons: [], armor: [] };
+  s.gear.weapons = Array.isArray(s.gear.weapons) ? s.gear.weapons : [];
+  s.gear.armor = Array.isArray(s.gear.armor) ? s.gear.armor : [];
+
+  s.equipment = s.equipment || { weapon: null, armor: null };
+
+  s.blackMarket = s.blackMarket || {
+    nextRefreshAt: Date.now() + BLACK_MARKET_REFRESH,
+    offerWeapon: null,
+  };
+
+  s.rivals = s.rivals || { defeatedCounts: {} };
+
+  s.ui = s.ui || {};
+  s.ui.page = s.ui.page || "crimes";
+  s.ui.profileView = s.ui.profileView || "overview";
+  s.ui.log = Array.isArray(s.ui.log) ? s.ui.log : [];
+
   s.timers = s.timers || {};
-  const now = Date.now();
-  s.timers.lastEnergy = s.timers.lastEnergy || now;
-  s.timers.lastHealth = s.timers.lastHealth || now;
+  s.timers.lastEnergy = s.timers.lastEnergy || Date.now();
+  s.timers.lastHealth = s.timers.lastHealth || Date.now();
+  s.timers.jailUntil = s.timers.jailUntil || null;
 
   return s;
 }
@@ -311,19 +292,27 @@ function applyRegen() {
 
   const eTicks = Math.floor((now - state.timers.lastEnergy) / REGEN_INTERVAL);
   if (eTicks > 0) {
-    state.player.energy = clamp(state.player.energy + eTicks, 0, state.player.maxEnergy);
+    state.player.energy = clamp(
+      state.player.energy + eTicks,
+      0,
+      state.player.maxEnergy
+    );
     state.timers.lastEnergy += eTicks * REGEN_INTERVAL;
   }
 
   const hTicks = Math.floor((now - state.timers.lastHealth) / REGEN_INTERVAL);
   if (hTicks > 0) {
-    state.player.health = clamp(state.player.health + hTicks, 0, state.player.maxHealth);
+    state.player.health = clamp(
+      state.player.health + hTicks,
+      0,
+      state.player.maxHealth
+    );
     state.timers.lastHealth += hTicks * REGEN_INTERVAL;
   }
 }
 
 /* =====================
-   JAIL / KO
+   STATUS HELPERS
 ===================== */
 
 function isJailed() {
@@ -335,7 +324,7 @@ function isKO() {
 }
 
 /* =====================
-   LOG / TOAST
+   LOG + TOAST
 ===================== */
 
 function addLog(text) {
@@ -355,19 +344,10 @@ function toast(msg) {
    INVENTORY HELPERS
 ===================== */
 
-function ensureInventory() {
-  if (!state.inventory) state.inventory = {};
-}
-
 function invAdd(item) {
-  ensureInventory();
   if (!state.inventory[item.id]) {
     state.inventory[item.id] = {
-      id: item.id,
-      name: item.name,
-      type: item.type,
-      energy: item.energy || 0,
-      health: item.health || 0,
+      ...item,
       quantity: 0,
     };
   }
@@ -375,30 +355,30 @@ function invAdd(item) {
 }
 
 function invUse(itemId) {
-  ensureInventory();
   const it = state.inventory[itemId];
   if (!it || it.quantity <= 0) return;
 
-  if (it.energy > 0) {
-    const before = state.player.energy;
-    state.player.energy = clamp(state.player.energy + it.energy, 0, state.player.maxEnergy);
-    const gained = state.player.energy - before;
-    addLog(`🍽️ Used ${it.name}. +${gained} Energy`);
-    toast(`+${gained} Energy`);
+  if (it.energy) {
+    state.player.energy = clamp(
+      state.player.energy + it.energy,
+      0,
+      state.player.maxEnergy
+    );
   }
-
-  if (it.health > 0) {
-    const before = state.player.health;
-    state.player.health = clamp(state.player.health + it.health, 0, state.player.maxHealth);
-    const gained = state.player.health - before;
-    addLog(`🩺 Used ${it.name}. +${gained} Health`);
-    toast(`+${gained} Health`);
+  if (it.health) {
+    state.player.health = clamp(
+      state.player.health + it.health,
+      0,
+      state.player.maxHealth
+    );
   }
 
   it.quantity -= 1;
   if (it.quantity <= 0) delete state.inventory[itemId];
-}
 
+  addLog(`Used ${it.name}`);
+  toast("Item used");
+}
 /* =====================
    SHOP BUY
 ===================== */
@@ -428,6 +408,7 @@ function buyShopItem(kind, itemId) {
   addLog(`🛒 Bought ${item.name} for $${item.price}`);
   toast("Purchased");
 }
+
 /* =====================
    GEAR HELPERS + BLACK MARKET
 ===================== */
@@ -512,15 +493,15 @@ function buyArms(kind, itemId, source = "arms") {
   if (source === "blackmarket") {
     item = state.blackMarket?.offerWeapon;
     if (!item) return;
-    if (kind !== "weapon") return;
 
     if (state.player.money < item.price) {
       toast("Not enough money.");
       return;
     }
-    state.player.money -= item.price;
 
+    state.player.money -= item.price;
     ownWeapon({ id: item.id, name: item.name, atk: item.atk, rarity: item.rarity });
+
     addLog(`🛒 Bought ${item.name} (Black Market) for $${item.price}`);
     toast("Purchased");
 
@@ -575,12 +556,8 @@ function tryLevelUp() {
 }
 
 /* =====================
-   SPECIALIZATION MODS + EQUIPMENT HOOKS
+   EQUIPMENT BONUSES
 ===================== */
-
-function getSpecMods() {
-  return {}; // specializations disabled for now
-}
 
 function equippedAttackBonus() {
   return state.equipment?.weapon?.atk || 0;
@@ -611,9 +588,8 @@ function doCrime(crimeId) {
 
   state.player.energy -= c.energy;
 
-  const spec = getSpecMods();
-  const successChance = clamp(c.success + (spec.crimeSuccess || 0), 0.05, 0.95);
-  const jailChance = clamp(c.jail + (spec.jailRisk || 0), 0.0, 0.95);
+  const successChance = clamp(c.success, 0.05, 0.95);
+  const jailChance = clamp(c.jail, 0.0, 0.95);
 
   if (Math.random() <= successChance) {
     const cash = randInt(c.money[0], c.money[1]);
@@ -666,21 +642,15 @@ function doFight(kind, id) {
 
   state.player.energy -= target.energy;
 
-  const spec = getSpecMods();
-  const dmgOutMod = spec.fightDmgOut || 0;
-  const dmgInMod = spec.fightDmgIn || 0;
-
   let enemyHP = target.hp;
   let playerHP = state.player.health;
 
   for (let round = 0; round < 6; round++) {
-    const pDmgBase = calcDamage(playerAtk(), target.def);
-    const pDmg = Math.max(1, Math.floor(pDmgBase * (1 + dmgOutMod)));
+    const pDmg = calcDamage(playerAtk(), target.def);
     enemyHP -= pDmg;
     if (enemyHP <= 0) break;
 
-    const eDmgBase = calcDamage(target.atk, playerDef());
-    const eDmg = Math.max(1, Math.floor(eDmgBase * (1 + dmgInMod)));
+    const eDmg = calcDamage(target.atk, playerDef());
     playerHP -= eDmg;
     if (playerHP <= 0) break;
   }
@@ -724,7 +694,7 @@ function doFight(kind, id) {
 ===================== */
 
 function propertyTrainingBonus() {
-  return 0; // later
+  return 0; // properties later
 }
 
 function msToClock(ms) {
@@ -741,12 +711,8 @@ function doGym(statKey) {
   const jailed = isJailed();
   const gym = jailed ? GYM.jail : GYM.normal;
 
-  const specMods = getSpecMods();
-  const successMod = specMods.gymSuccess || 0;
-  const energyDiscount = specMods.gymEnergyDiscount || 0;
-
-  const energyCost = Math.max(1, gym.energy - energyDiscount);
-  const successChance = clamp(gym.success + successMod + propertyTrainingBonus(), 0.05, 0.95);
+  const energyCost = gym.energy;
+  const successChance = clamp(gym.success + propertyTrainingBonus(), 0.05, 0.95);
 
   if (state.player.energy < energyCost) return toast("Not enough energy.");
   if (statKey !== "attack" && statKey !== "defense") return;
@@ -793,12 +759,10 @@ const hudMoney = document.getElementById("hudMoney");
 const hudLevel = document.getElementById("hudLevel");
 const hudTitle = document.getElementById("hudTitle");
 
-const systemBanner = document.getElementById("systemBanner");
-
 const profileAvatar = document.getElementById("profileAvatar");
 const profileName = document.getElementById("profileName");
 const profileTitleBadge = document.getElementById("profileTitleBadge");
-const profileSpecBadge = document.getElementById("profileSpecBadge");
+const profileSpecBadge = document.getElementById("profileSpecBadge"); // still exists in HTML; we set a placeholder
 
 const xpText = document.getElementById("xpText");
 const xpBar = document.getElementById("xpBar");
@@ -855,7 +819,6 @@ if (topNav) {
   });
 }
 
-
 /* =====================
    PROFILE SUBVIEWS
 ===================== */
@@ -870,6 +833,7 @@ function openProfileView(view) {
 
 /* =====================
    CLICK HANDLER (ACTIONS)
+   NOTE: specialization/pickSpec removed
 ===================== */
 
 document.body.addEventListener("click", e => {
@@ -878,34 +842,12 @@ document.body.addEventListener("click", e => {
 
   const action = btn.dataset.action;
 
-    // Lock specialization
-    state.player.specialization = spec;
-
-    // Immediately hide the gate
-    const gate = document.getElementById("specGate");
-    if (gate) gate.hidden = true;
-
-    addLog(`Chose specialization: ${SPECIALIZATIONS[spec].name}`);
-    toast("Specialization locked in");
-
-    // Save + force reload so UI fully remounts
-    save();
-    location.reload();
-    return;
-  }
-
-  /* =====================
-     PROFILE SUBVIEWS
-  ===================== */
   if (action === "openProfileView") {
     openProfileView(btn.dataset.view);
     render();
     return;
   }
 
-  /* =====================
-     CRIMES
-  ===================== */
   if (action === "doCrime") {
     doCrime(btn.dataset.crime);
     save();
@@ -913,9 +855,6 @@ document.body.addEventListener("click", e => {
     return;
   }
 
-  /* =====================
-     FIGHTS
-  ===================== */
   if (action === "doFight") {
     doFight(btn.dataset.kind, btn.dataset.fight);
     save();
@@ -923,9 +862,6 @@ document.body.addEventListener("click", e => {
     return;
   }
 
-  /* =====================
-     GYM
-  ===================== */
   if (action === "doGym") {
     doGym(btn.dataset.stat);
     save();
@@ -933,9 +869,6 @@ document.body.addEventListener("click", e => {
     return;
   }
 
-  /* =====================
-     SHOP
-  ===================== */
   if (action === "buyShop") {
     buyShopItem(btn.dataset.kind, btn.dataset.item);
     save();
@@ -943,9 +876,6 @@ document.body.addEventListener("click", e => {
     return;
   }
 
-  /* =====================
-     INVENTORY USE
-  ===================== */
   if (action === "useInv") {
     invUse(btn.dataset.item);
     save();
@@ -953,9 +883,6 @@ document.body.addEventListener("click", e => {
     return;
   }
 
-  /* =====================
-     ARMS DEALER
-  ===================== */
   if (action === "buyArms") {
     buyArms(btn.dataset.kind, btn.dataset.item, "arms");
     save();
@@ -970,9 +897,6 @@ document.body.addEventListener("click", e => {
     return;
   }
 
-  /* =====================
-     EQUIP GEAR
-  ===================== */
   if (action === "equipWeapon") {
     equipWeaponByIndex(Number(btn.dataset.idx));
     save();
@@ -987,9 +911,6 @@ document.body.addEventListener("click", e => {
     return;
   }
 
-  /* =====================
-     HARD RESET
-  ===================== */
   if (action === "hardReset") {
     if (confirm("Reset all progress?")) {
       localStorage.removeItem(SAVE_KEY);
@@ -1012,6 +933,7 @@ function renderProfile() {
   if (profileAvatar) profileAvatar.textContent = state.player.avatar;
   if (profileName) profileName.textContent = state.player.name;
   if (profileTitleBadge) profileTitleBadge.textContent = state.player.title;
+  if (profileSpecBadge) profileSpecBadge.textContent = "No Specialization";
 
   const xpNeed = state.player.level * 100;
   if (xpText) xpText.textContent = `${state.player.xp} / ${xpNeed}`;
@@ -1032,7 +954,6 @@ function renderProfile() {
 
   if (activityLog) activityLog.innerHTML = state.ui.log.join("<br>");
 
-  // restore profile subview selection
   openProfileView(state.ui.profileView || "overview");
 }
 
@@ -1155,7 +1076,7 @@ function renderProfileGear() {
 }
 
 /* =====================
-   PAGES RENDER (Crimes/Fights/Gym/Shop/Arms)
+   PAGES RENDER
 ===================== */
 
 function renderCrimesPage() {
@@ -1299,19 +1220,14 @@ function renderGymPage() {
 
   const gym = jailed ? GYM.jail : GYM.normal;
 
-  const specMods = getSpecMods();
-  const energyDiscount = specMods.gymEnergyDiscount || 0;
-  const successMod = specMods.gymSuccess || 0;
-
-  const energyCost = Math.max(1, gym.energy - energyDiscount);
-  const successChance = clamp(gym.success + successMod + propertyTrainingBonus(), 0.05, 0.95);
+  const energyCost = gym.energy;
+  const successChance = clamp(gym.success + propertyTrainingBonus(), 0.05, 0.95);
 
   const jailMsg = jailed
     ? `<div class="muted">🚔 In Jail — time left: <b>${msToClock(state.timers.jailUntil - Date.now())}</b></div><div class="hr"></div>`
     : "";
 
   const statusText = ko ? "💫 KO (Heal first)" : (jailed ? "🚔 Jail Gym Available" : "✅ Normal Gym Available");
-
   const disabled = ko || state.player.energy < energyCost;
 
   pageGym.innerHTML = `
@@ -1402,7 +1318,7 @@ function renderShopPage() {
     <div class="grid">
       <div class="card">
         <div class="section-title">Shop</div>
-        <div class="muted">Food restores Energy. Healing restores Health. Purchases go to your Inventory.</div>
+        <div class="muted">Food restores Energy. Healing restores Health. Purchases go to Inventory.</div>
       </div>
 
       <div class="card">
@@ -1510,16 +1426,12 @@ function renderArmsPage() {
 }
 
 /* =====================
-   MAIN RENDER LOOP (Fixes included)
+   MAIN RENDER LOOP
 ===================== */
 
 function render() {
   applyRegen();
   updateTitle();
-
-  // FIX: Always enforce specialization gate visibility
-  const g = document.getElementById("specGate");
-  if (g) g.hidden = !!state.player.specialization;
 
   renderHUD();
   renderProfile();
@@ -1533,10 +1445,9 @@ function render() {
   renderProfileInventory();
   renderProfileGear();
 
-  // TAB LOCK RULES:
+  // Tab lock rules:
   // - Crimes + Fights disabled if jailed OR KO
   // - Gym disabled only if KO (Gym stays usable in jail)
-  // - Everything else enabled
   navButtons.forEach(btn => {
     const route = btn.dataset.route;
 
@@ -1544,16 +1455,13 @@ function render() {
       btn.disabled = isJailed() || isKO();
       return;
     }
-
     if (route === "gym") {
       btn.disabled = isKO();
       return;
     }
-
     btn.disabled = false;
   });
 
-  // Restore last page on load
   showPage(state.ui.page || "crimes");
 
   save();
