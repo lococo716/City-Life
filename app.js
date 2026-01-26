@@ -1,7 +1,7 @@
 /* =========================================================
    Underworld – Mafia Wars–style Web Game
    app.js (Specializations DISABLED for now)
-   Properties Step 1 + Step 2 INCLUDED
+   Properties Step 1 + Step 2 + Step 3 + Step 4 INCLUDED
    Compatible with your index.html + styles.css
    ========================================================= */
 
@@ -24,6 +24,7 @@ const BLACK_MARKET_REFRESH = 45 * MS.MIN;      // black market refresh every 45 
 
 // PROPERTIES
 const PROPERTY_OFFLINE_CAP = 4 * MS.HOUR;      // offline income cap
+const PROPERTY_UPGRADE_GROWTH = 1.35;          // upgrade cost multiplier per level
 
 /* =====================
    TITLES / REPUTATION
@@ -55,6 +56,11 @@ function randInt(min, max) {
 
 function pct(n) {
   return Math.round(n * 100);
+}
+
+function fmtMoney(n) {
+  const v = Math.max(0, Math.floor(n || 0));
+  return `$${v.toLocaleString()}`;
 }
 
 /* =====================
@@ -204,12 +210,37 @@ const PROPERTIES = [
 ];
 
 /* =====================
-   PROPERTIES — INCOME ENGINE (Step 2)
+   PROPERTIES — HELPERS (Step 3/4)
 ===================== */
 
 function getOwnedPropertyLevel(propId) {
   return state.properties?.owned?.[propId]?.level || 0; // 0 = not owned
 }
+
+function isPropertyOwned(propId) {
+  return getOwnedPropertyLevel(propId) > 0;
+}
+
+function getUpgradeCost(propId) {
+  const p = PROPERTIES.find(x => x.id === propId);
+  if (!p) return Infinity;
+  const lvl = getOwnedPropertyLevel(propId);
+  if (lvl <= 0) return Infinity;         // can't upgrade if not owned
+  if (lvl >= p.maxLevel) return Infinity; // maxed
+  const cost = p.upgradeBaseCost * Math.pow(PROPERTY_UPGRADE_GROWTH, Math.max(0, lvl - 1));
+  return Math.round(cost);
+}
+
+function getPropertyIncomePerHour(propId) {
+  const p = PROPERTIES.find(x => x.id === propId);
+  if (!p) return 0;
+  const lvl = getOwnedPropertyLevel(propId);
+  return lvl > 0 ? p.baseIncomePerHour * lvl : 0;
+}
+
+/* =====================
+   PROPERTIES — INCOME ENGINE (Step 2)
+===================== */
 
 function getTotalIncomePerHour() {
   let total = 0;
@@ -227,7 +258,6 @@ function applyPropertyIncome() {
   const last = state.properties.lastIncomeAt || now;
 
   const elapsed = Math.min(Math.max(0, now - last), PROPERTY_OFFLINE_CAP);
-
   const wholeMinutes = Math.floor(elapsed / MS.MIN);
   if (wholeMinutes <= 0) return;
 
@@ -292,10 +322,10 @@ function defaultState() {
       offerWeapon: null,
     },
 
-    // PROPERTIES (Step 1)
+    // PROPERTIES
     properties: {
       lastIncomeAt: now,
-      owned: {},
+      owned: {}, // { propId: { level: number } }
     },
 
     rivals: { defeatedCounts: {} },
@@ -359,6 +389,7 @@ function sanitize(s) {
   s.player.title = s.player.title || "Street Rat";
 
   s.inventory = s.inventory || {};
+
   s.gear = s.gear || { weapons: [], armor: [] };
   s.gear.weapons = Array.isArray(s.gear.weapons) ? s.gear.weapons : [];
   s.gear.armor = Array.isArray(s.gear.armor) ? s.gear.armor : [];
@@ -370,10 +401,18 @@ function sanitize(s) {
     offerWeapon: null,
   };
 
-  // PROPERTIES (Step 1 + Step 2 safety)
+  // PROPERTIES safety
   s.properties = s.properties || {};
   if (typeof s.properties.lastIncomeAt !== "number") s.properties.lastIncomeAt = Date.now();
   s.properties.owned = s.properties.owned || {};
+
+  // ensure levels are sane integers
+  for (const p of PROPERTIES) {
+    const entry = s.properties.owned[p.id];
+    if (!entry) continue;
+    entry.level = clamp(Math.floor(entry.level || 0), 0, p.maxLevel);
+    if (entry.level <= 0) delete s.properties.owned[p.id];
+  }
 
   s.rivals = s.rivals || { defeatedCounts: {} };
 
@@ -399,21 +438,13 @@ function applyRegen() {
 
   const eTicks = Math.floor((now - state.timers.lastEnergy) / REGEN_INTERVAL);
   if (eTicks > 0) {
-    state.player.energy = clamp(
-      state.player.energy + eTicks,
-      0,
-      state.player.maxEnergy
-    );
+    state.player.energy = clamp(state.player.energy + eTicks, 0, state.player.maxEnergy);
     state.timers.lastEnergy += eTicks * REGEN_INTERVAL;
   }
 
   const hTicks = Math.floor((now - state.timers.lastHealth) / REGEN_INTERVAL);
   if (hTicks > 0) {
-    state.player.health = clamp(
-      state.player.health + hTicks,
-      0,
-      state.player.maxHealth
-    );
+    state.player.health = clamp(state.player.health + hTicks, 0, state.player.maxHealth);
     state.timers.lastHealth += hTicks * REGEN_INTERVAL;
   }
 }
@@ -453,10 +484,7 @@ function toast(msg) {
 
 function invAdd(item) {
   if (!state.inventory[item.id]) {
-    state.inventory[item.id] = {
-      ...item,
-      quantity: 0,
-    };
+    state.inventory[item.id] = { ...item, quantity: 0 };
   }
   state.inventory[item.id].quantity += 1;
 }
@@ -466,18 +494,10 @@ function invUse(itemId) {
   if (!it || it.quantity <= 0) return;
 
   if (it.energy) {
-    state.player.energy = clamp(
-      state.player.energy + it.energy,
-      0,
-      state.player.maxEnergy
-    );
+    state.player.energy = clamp(state.player.energy + it.energy, 0, state.player.maxEnergy);
   }
   if (it.health) {
-    state.player.health = clamp(
-      state.player.health + it.health,
-      0,
-      state.player.maxHealth
-    );
+    state.player.health = clamp(state.player.health + it.health, 0, state.player.maxHealth);
   }
 
   it.quantity -= 1;
@@ -602,10 +622,7 @@ function buyArms(kind, itemId, source = "arms") {
     item = state.blackMarket?.offerWeapon;
     if (!item) return;
 
-    if (state.player.money < item.price) {
-      toast("Not enough money.");
-      return;
-    }
+    if (state.player.money < item.price) return toast("Not enough money.");
 
     state.player.money -= item.price;
     ownWeapon({ id: item.id, name: item.name, atk: item.atk, rarity: item.rarity });
@@ -620,10 +637,7 @@ function buyArms(kind, itemId, source = "arms") {
   item = list.find(x => x.id === itemId);
   if (!item) return;
 
-  if (state.player.money < item.price) {
-    toast("Not enough money.");
-    return;
-  }
+  if (state.player.money < item.price) return toast("Not enough money.");
 
   state.player.money -= item.price;
 
@@ -637,6 +651,51 @@ function buyArms(kind, itemId, source = "arms") {
   toast("Purchased");
 }
 
+/* =====================
+   PROPERTIES (Step 3 + Step 4 actions)
+===================== */
+
+function ensureProperties() {
+  if (!state.properties) {
+    state.properties = { lastIncomeAt: Date.now(), owned: {} };
+  }
+  if (!state.properties.owned) state.properties.owned = {};
+}
+
+function buyProperty(propId) {
+  ensureProperties();
+  const p = PROPERTIES.find(x => x.id === propId);
+  if (!p) return;
+
+  if (isPropertyOwned(propId)) return toast("Already owned.");
+  if (state.player.money < p.buyPrice) return toast("Not enough money.");
+
+  state.player.money -= p.buyPrice;
+  state.properties.owned[propId] = { level: 1 };
+
+  addLog(`🏠 Bought ${p.name} (Lv 1) for $${p.buyPrice}`);
+  toast("Property purchased");
+}
+
+function upgradeProperty(propId) {
+  ensureProperties();
+  const p = PROPERTIES.find(x => x.id === propId);
+  if (!p) return;
+
+  const lvl = getOwnedPropertyLevel(propId);
+  if (lvl <= 0) return toast("Buy it first.");
+  if (lvl >= p.maxLevel) return toast("Max level.");
+
+  const cost = getUpgradeCost(propId);
+  if (!Number.isFinite(cost)) return toast("Can't upgrade.");
+  if (state.player.money < cost) return toast("Not enough money.");
+
+  state.player.money -= cost;
+  state.properties.owned[propId].level = lvl + 1;
+
+  addLog(`⬆️ Upgraded ${p.name} to Lv ${lvl + 1} for $${cost}`);
+  toast("Upgraded");
+}
 /* =====================
    XP / LEVEL UPS
 ===================== */
@@ -802,7 +861,8 @@ function doFight(kind, id) {
 ===================== */
 
 function propertyTrainingBonus() {
-  return 0; // training boost later
+  // Training boost comes later — properties have data ready though
+  return 0;
 }
 
 function msToClock(ms) {
@@ -846,9 +906,22 @@ function doGym(statKey) {
   toast("Training failed");
   tryLevelUp();
 }
+
 /* =====================
-   PAGE RENDERS (RESTORED)
-   These were missing, causing tabs to appear blank.
+   TITLE UPDATE
+===================== */
+
+function updateTitle() {
+  for (let i = TITLES.length - 1; i >= 0; i--) {
+    if (state.player.reputation >= TITLES[i].points) {
+      state.player.title = TITLES[i].name;
+      break;
+    }
+  }
+}
+
+/* =====================
+   PAGE RENDERS
 ===================== */
 
 function renderCrimesPage() {
@@ -1034,7 +1107,7 @@ function renderShopPage() {
               <div class="row__sub">${it.desc}</div>
             </div>
             <div class="row__right">
-              <span class="tag">$${it.price}</span>
+              <span class="tag">${fmtMoney(it.price)}</span>
               <button class="btn btn--small btn--primary"
                 data-action="buyShop"
                 data-kind="food"
@@ -1058,7 +1131,7 @@ function renderShopPage() {
               <div class="row__sub">${it.desc}</div>
             </div>
             <div class="row__right">
-              <span class="tag">$${it.price}</span>
+              <span class="tag">${fmtMoney(it.price)}</span>
               <button class="btn btn--small btn--success"
                 data-action="buyShop"
                 data-kind="healing"
@@ -1096,7 +1169,7 @@ function renderArmsPage() {
               <div class="row__sub">Attack +${w.atk}</div>
             </div>
             <div class="row__right">
-              <span class="tag">$${w.price}</span>
+              <span class="tag">${fmtMoney(w.price)}</span>
               <button class="btn btn--small btn--primary"
                 data-action="buyArms"
                 data-kind="weapon"
@@ -1120,7 +1193,7 @@ function renderArmsPage() {
               <div class="row__sub">Defense +${a.def}</div>
             </div>
             <div class="row__right">
-              <span class="tag">$${a.price}</span>
+              <span class="tag">${fmtMoney(a.price)}</span>
               <button class="btn btn--small btn--success"
                 data-action="buyArms"
                 data-kind="armor"
@@ -1146,7 +1219,7 @@ function renderArmsPage() {
             <div class="row__sub">Attack +${bm.atk}</div>
           </div>
           <div class="row__right">
-            <span class="tag">$${bm.price}</span>
+            <span class="tag">${fmtMoney(bm.price)}</span>
             <button class="btn btn--small ${bm.rarity === "gold" ? "btn--gold" : "btn--primary"}"
               data-action="buyBM"
               ${state.player.money < bm.price ? "disabled" : ""}>
@@ -1161,187 +1234,77 @@ function renderArmsPage() {
     </div>
   `;
 }
-/* =====================
-   TITLE UPDATE
-===================== */
-
-function updateTitle() {
-  for (let i = TITLES.length - 1; i >= 0; i--) {
-    if (state.player.reputation >= TITLES[i].points) {
-      state.player.title = TITLES[i].name;
-      break;
-    }
-  }
-}
 
 /* =====================
-   DOM REFERENCES
-===================== */
-
-const hudMoney = document.getElementById("hudMoney");
-const hudLevel = document.getElementById("hudLevel");
-const hudTitle = document.getElementById("hudTitle");
-
-const profileAvatar = document.getElementById("profileAvatar");
-const profileName = document.getElementById("profileName");
-const profileTitleBadge = document.getElementById("profileTitleBadge");
-const profileSpecBadge = document.getElementById("profileSpecBadge");
-
-const xpText = document.getElementById("xpText");
-const xpBar = document.getElementById("xpBar");
-const energyText = document.getElementById("energyText");
-const energyBar = document.getElementById("energyBar");
-const healthText = document.getElementById("healthText");
-const healthBar = document.getElementById("healthBar");
-
-const statLevel = document.getElementById("statLevel");
-const statAtk = document.getElementById("statAtk");
-const statDef = document.getElementById("statDef");
-const statIncome = document.getElementById("statIncome");
-const statJail = document.getElementById("statJail");
-const statKO = document.getElementById("statKO");
-
-const activityLog = document.getElementById("activityLog");
-
-const pageCrimes = document.getElementById("page-crimes");
-const pageFights = document.getElementById("page-fights");
-const pageGym = document.getElementById("page-gym");
-const pageShop = document.getElementById("page-shop");
-const pageArms = document.getElementById("page-arms");
-const pageProperties = document.getElementById("page-properties");
-
-const profileInventoryBox = document.getElementById("profileInventory");
-const profileGearBox = document.getElementById("profileGear");
-const profilePropsBox = document.getElementById("profileProps");
-
-/* =====================
-   NAVIGATION
-===================== */
-
-const pages = document.querySelectorAll(".page");
-const navButtons = document.querySelectorAll(".nav__btn");
-
-function showPage(id) {
-  pages.forEach(p => (p.hidden = p.dataset.page !== id));
-  navButtons.forEach(b =>
-    b.classList.toggle("nav__btn--active", b.dataset.route === id)
-  );
-  state.ui.page = id;
-  save();
-}
-
-const topNav = document.getElementById("topNav");
-topNav.addEventListener("click", e => {
-  const btn = e.target.closest(".nav__btn");
-  if (!btn || btn.disabled) return;
-  showPage(btn.dataset.route);
-  render();
-});
-
-/* =====================
-   PROFILE SUBVIEWS
-===================== */
-
-function openProfileView(view) {
-  document.querySelectorAll("[data-profile-view]").forEach(v => {
-    v.hidden = v.dataset.profileView !== view;
-  });
-  state.ui.profileView = view;
-  save();
-}
-
-/* =====================
-   CLICK HANDLER
-===================== */
-
-document.body.addEventListener("click", e => {
-  const btn = e.target.closest("[data-action]");
-  if (!btn) return;
-
-  const a = btn.dataset.action;
-
-  if (a === "openProfileView") {
-    openProfileView(btn.dataset.view);
-  }
-  if (a === "doCrime") doCrime(btn.dataset.crime);
-  if (a === "doFight") doFight(btn.dataset.kind, btn.dataset.fight);
-  if (a === "doGym") doGym(btn.dataset.stat);
-  if (a === "buyShop") buyShopItem(btn.dataset.kind, btn.dataset.item);
-  if (a === "useInv") invUse(btn.dataset.item);
-  if (a === "buyArms") buyArms(btn.dataset.kind, btn.dataset.item);
-  if (a === "buyBM") buyArms("weapon", null, "blackmarket");
-  if (a === "equipWeapon") equipWeaponByIndex(+btn.dataset.idx);
-  if (a === "equipArmor") equipArmorByIndex(+btn.dataset.idx);
-
-  if (a === "hardReset" && confirm("Reset all progress?")) {
-    localStorage.removeItem(SAVE_KEY);
-    location.reload();
-  }
-
-  save();
-  render();
-});
-
-/* =====================
-   RENDER HUD + PROFILE
-===================== */
-
-function renderHUD() {
-  hudMoney.textContent = `$${state.player.money}`;
-  hudLevel.textContent = `Lv ${state.player.level}`;
-  hudTitle.textContent = state.player.title;
-}
-
-function renderProfile() {
-  profileAvatar.textContent = state.player.avatar;
-  profileName.textContent = state.player.name;
-  profileTitleBadge.textContent = state.player.title;
-
-  // safe: if element exists, set it
-  if (profileSpecBadge) profileSpecBadge.textContent = "No Specialization";
-
-  const xpNeed = xpNeededForLevel(state.player.level);
-  xpText.textContent = `${state.player.xp} / ${xpNeed}`;
-  xpBar.style.width = `${(state.player.xp / xpNeed) * 100}%`;
-
-  energyText.textContent = `${state.player.energy}/${state.player.maxEnergy}`;
-  energyBar.style.width = `${(state.player.energy / state.player.maxEnergy) * 100}%`;
-
-  healthText.textContent = `${state.player.health}/${state.player.maxHealth}`;
-  healthBar.style.width = `${(state.player.health / state.player.maxHealth) * 100}%`;
-
-  statLevel.textContent = state.player.level;
-  statAtk.textContent = state.player.attack;
-  statDef.textContent = state.player.defense;
-
-  // PROPERTIES (Step 2)
-  statIncome.textContent = `$${getTotalIncomePerHour()}/hr`;
-
-  statJail.textContent = isJailed() ? "Yes" : "No";
-  statKO.textContent = isKO() ? "Yes" : "No";
-
-  activityLog.innerHTML = state.ui.log.join("<br>");
-  openProfileView(state.ui.profileView);
-}
-
-/* =====================
-   PLACEHOLDER: PROPERTIES PAGE
+   PROPERTIES PAGE (Step 3 + 4 UI)
 ===================== */
 
 function renderPropertiesPage() {
+  const incomeHr = getTotalIncomePerHour();
+
   pageProperties.innerHTML = `
     <div class="card">
       <div class="section-title">Properties</div>
       <div class="muted">
         Buy and upgrade properties for passive income.<br>
-        (Income engine is live. Buying/Upgrading comes next.)
+        Offline income is capped at <b>4 hours</b>.
+      </div>
+      <div class="hr"></div>
+      <div class="muted">Current passive income: <b>${fmtMoney(incomeHr)}/hr</b></div>
+    </div>
+
+    <div class="card" style="margin-top:12px;">
+      <div class="list">
+        ${PROPERTIES.map(p => {
+          const lvl = getOwnedPropertyLevel(p.id);
+          const owned = lvl > 0;
+
+          const buyDisabled = owned || state.player.money < p.buyPrice;
+          const upCost = getUpgradeCost(p.id);
+          const canUpgrade = owned && lvl < p.maxLevel;
+          const upDisabled = !canUpgrade || state.player.money < upCost;
+
+          const perHr = owned ? (p.baseIncomePerHour * lvl) : 0;
+
+          return `
+            <div class="row">
+              <div class="row__left">
+                <div class="row__title">${p.name} ${owned ? `<span class="tag">Lv ${lvl}</span>` : ``}</div>
+                <div class="row__sub">
+                  ${p.desc}<br>
+                  Income: <b>${fmtMoney(perHr)}/hr</b> ${owned ? `( +${fmtMoney(p.baseIncomePerHour)}/hr per level )` : `( ${fmtMoney(p.baseIncomePerHour)}/hr per level )`}
+                </div>
+              </div>
+
+              <div class="row__right">
+                ${!owned ? `
+                  <span class="tag">${fmtMoney(p.buyPrice)}</span>
+                  <button class="btn btn--small btn--gold"
+                    data-action="buyProperty"
+                    data-prop="${p.id}"
+                    ${buyDisabled ? "disabled" : ""}>
+                    Buy
+                  </button>
+                ` : `
+                  ${lvl >= p.maxLevel ? `<span class="tag">Max</span>` : `<span class="tag">${fmtMoney(upCost)}</span>`}
+                  <button class="btn btn--small btn--primary"
+                    data-action="upgradeProperty"
+                    data-prop="${p.id}"
+                    ${upDisabled ? "disabled" : ""}>
+                    Upgrade
+                  </button>
+                `}
+              </div>
+            </div>
+          `;
+        }).join("")}
       </div>
     </div>
   `;
 }
 
 /* =====================
-   PROFILE INVENTORY / GEAR / PROPERTIES
+   PROFILE RENDERS
 ===================== */
 
 function renderProfileInventory() {
@@ -1441,23 +1404,190 @@ function renderProfileProps() {
   }
 
   profilePropsBox.innerHTML = `
+    <div class="muted" style="margin-bottom:10px;">
+      Passive income: <b>${fmtMoney(getTotalIncomePerHour())}/hr</b>
+    </div>
+
     <div class="list">
       ${ownedList.map(p => {
         const lvl = owned[p.id].level;
+        const maxed = lvl >= p.maxLevel;
+        const upCost = getUpgradeCost(p.id);
+        const upDisabled = maxed || state.player.money < upCost;
+
         return `
           <div class="row">
             <div class="row__left">
-              <div class="row__title">${p.name}</div>
-              <div class="row__sub">Level ${lvl} • $${p.baseIncomePerHour * lvl}/hr</div>
+              <div class="row__title">${p.name} <span class="tag">Lv ${lvl}</span></div>
+              <div class="row__sub">
+                Income: <b>${fmtMoney(p.baseIncomePerHour * lvl)}/hr</b>
+              </div>
             </div>
             <div class="row__right">
-              <span class="tag">$${p.baseIncomePerHour}/hr per level</span>
+              ${maxed ? `<span class="tag">Max</span>` : `<span class="tag">${fmtMoney(upCost)}</span>`}
+              <button class="btn btn--small btn--primary"
+                data-action="upgradeProperty"
+                data-prop="${p.id}"
+                ${upDisabled ? "disabled" : ""}>
+                Upgrade
+              </button>
             </div>
           </div>
         `;
       }).join("")}
     </div>
   `;
+}
+/* =====================
+   DOM REFERENCES
+===================== */
+
+const hudMoney = document.getElementById("hudMoney");
+const hudLevel = document.getElementById("hudLevel");
+const hudTitle = document.getElementById("hudTitle");
+
+const profileAvatar = document.getElementById("profileAvatar");
+const profileName = document.getElementById("profileName");
+const profileTitleBadge = document.getElementById("profileTitleBadge");
+const profileSpecBadge = document.getElementById("profileSpecBadge");
+
+const xpText = document.getElementById("xpText");
+const xpBar = document.getElementById("xpBar");
+const energyText = document.getElementById("energyText");
+const energyBar = document.getElementById("energyBar");
+const healthText = document.getElementById("healthText");
+const healthBar = document.getElementById("healthBar");
+
+const statLevel = document.getElementById("statLevel");
+const statAtk = document.getElementById("statAtk");
+const statDef = document.getElementById("statDef");
+const statIncome = document.getElementById("statIncome");
+const statJail = document.getElementById("statJail");
+const statKO = document.getElementById("statKO");
+
+const activityLog = document.getElementById("activityLog");
+
+const pageCrimes = document.getElementById("page-crimes");
+const pageFights = document.getElementById("page-fights");
+const pageGym = document.getElementById("page-gym");
+const pageShop = document.getElementById("page-shop");
+const pageArms = document.getElementById("page-arms");
+const pageProperties = document.getElementById("page-properties");
+
+const profileInventoryBox = document.getElementById("profileInventory");
+const profileGearBox = document.getElementById("profileGear");
+const profilePropsBox = document.getElementById("profileProps");
+
+/* =====================
+   NAVIGATION
+===================== */
+
+const pages = document.querySelectorAll(".page");
+const navButtons = document.querySelectorAll(".nav__btn");
+
+function showPage(id) {
+  pages.forEach(p => (p.hidden = p.dataset.page !== id));
+  navButtons.forEach(b =>
+    b.classList.toggle("nav__btn--active", b.dataset.route === id)
+  );
+  state.ui.page = id;
+  save();
+}
+
+const topNav = document.getElementById("topNav");
+topNav.addEventListener("click", e => {
+  const btn = e.target.closest(".nav__btn");
+  if (!btn || btn.disabled) return;
+  showPage(btn.dataset.route);
+  render();
+});
+
+/* =====================
+   PROFILE SUBVIEWS
+===================== */
+
+function openProfileView(view) {
+  document.querySelectorAll("[data-profile-view]").forEach(v => {
+    v.hidden = v.dataset.profileView !== view;
+  });
+  state.ui.profileView = view;
+  save();
+}
+
+/* =====================
+   CLICK HANDLER
+===================== */
+
+document.body.addEventListener("click", e => {
+  const btn = e.target.closest("[data-action]");
+  if (!btn) return;
+
+  const a = btn.dataset.action;
+
+  if (a === "openProfileView") openProfileView(btn.dataset.view);
+
+  if (a === "doCrime") doCrime(btn.dataset.crime);
+  if (a === "doFight") doFight(btn.dataset.kind, btn.dataset.fight);
+  if (a === "doGym") doGym(btn.dataset.stat);
+
+  if (a === "buyShop") buyShopItem(btn.dataset.kind, btn.dataset.item);
+  if (a === "useInv") invUse(btn.dataset.item);
+
+  if (a === "buyArms") buyArms(btn.dataset.kind, btn.dataset.item);
+  if (a === "buyBM") buyArms("weapon", null, "blackmarket");
+  if (a === "equipWeapon") equipWeaponByIndex(+btn.dataset.idx);
+  if (a === "equipArmor") equipArmorByIndex(+btn.dataset.idx);
+
+  // PROPERTIES (Step 3 + 4)
+  if (a === "buyProperty") buyProperty(btn.dataset.prop);
+  if (a === "upgradeProperty") upgradeProperty(btn.dataset.prop);
+
+  if (a === "hardReset" && confirm("Reset all progress?")) {
+    localStorage.removeItem(SAVE_KEY);
+    location.reload();
+  }
+
+  save();
+  render();
+});
+
+/* =====================
+   HUD + PROFILE TOP
+===================== */
+
+function renderHUD() {
+  hudMoney.textContent = fmtMoney(state.player.money);
+  hudLevel.textContent = `Lv ${state.player.level}`;
+  hudTitle.textContent = state.player.title;
+}
+
+function renderProfileTop() {
+  profileAvatar.textContent = state.player.avatar;
+  profileName.textContent = state.player.name;
+  profileTitleBadge.textContent = state.player.title;
+  if (profileSpecBadge) profileSpecBadge.textContent = "No Specialization";
+
+  const xpNeed = xpNeededForLevel(state.player.level);
+  xpText.textContent = `${state.player.xp} / ${xpNeed}`;
+  xpBar.style.width = `${(state.player.xp / xpNeed) * 100}%`;
+
+  energyText.textContent = `${state.player.energy}/${state.player.maxEnergy}`;
+  energyBar.style.width = `${(state.player.energy / state.player.maxEnergy) * 100}%`;
+
+  healthText.textContent = `${state.player.health}/${state.player.maxHealth}`;
+  healthBar.style.width = `${(state.player.health / state.player.maxHealth) * 100}%`;
+
+  statLevel.textContent = state.player.level;
+  statAtk.textContent = state.player.attack;
+  statDef.textContent = state.player.defense;
+
+  statIncome.textContent = `${fmtMoney(getTotalIncomePerHour())}/hr`;
+
+  statJail.textContent = isJailed() ? "Yes" : "No";
+  statKO.textContent = isKO() ? "Yes" : "No";
+
+  activityLog.innerHTML = state.ui.log.join("<br>");
+  openProfileView(state.ui.profileView);
 }
 
 /* =====================
@@ -1466,14 +1596,11 @@ function renderProfileProps() {
 
 function render() {
   applyRegen();
-
-  // PROPERTIES (Step 2)
   applyPropertyIncome();
-
   updateTitle();
 
   renderHUD();
-  renderProfile();
+  renderProfileTop();
 
   renderCrimesPage();
   renderFightsPage();
@@ -1486,9 +1613,14 @@ function render() {
   renderProfileGear();
   renderProfileProps();
 
+  // Tabs availability: in jail only Profile works; KO blocks fights/crimes too
   navButtons.forEach(btn => {
+    if (isJailed()) {
+      btn.disabled = btn.dataset.route !== "profile";
+      return;
+    }
     if (btn.dataset.route === "crimes" || btn.dataset.route === "fights") {
-      btn.disabled = isJailed() || isKO();
+      btn.disabled = isKO();
     } else if (btn.dataset.route === "gym") {
       btn.disabled = isKO();
     } else {
