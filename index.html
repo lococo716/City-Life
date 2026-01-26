@@ -1,1 +1,222 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Mafia Wars Web</title>
+  <link rel="stylesheet" href="./styles.css" />
+</head>
+<body>
+  <div class="app-shell">
+    <header class="topbar">
+      <div class="brand">
+        <div class="brand__dot"></div>
+        <div class="brand__text">
+          <div class="brand__title">Underworld</div>
+          <div class="brand__subtitle">Mafia Wars–style web game</div>
+        </div>
+      </div>
+
+      <div class="hud">
+        <div class="pill" title="Money">
+          <span class="pill__label">💵</span>
+          <span id="hudMoney" class="pill__value">$0</span>
+        </div>
+        <div class="pill" title="Level">
+          <span class="pill__label">⭐</span>
+          <span id="hudLevel" class="pill__value">Lv 1</span>
+        </div>
+        <div class="pill" title="Title">
+          <span class="pill__label">🏷️</span>
+          <span id="hudTitle" class="pill__value">Street Rat</span>
+        </div>
+      </div>
+    </header>
+
+    <nav class="nav" id="topNav">
+      <button class="nav__btn" data-route="crimes">Crimes</button>
+      <button class="nav__btn" data-route="fights">Fights</button>
+      <button class="nav__btn" data-route="gym">Gym</button>
+      <button class="nav__btn" data-route="shop">Shop</button>
+      <button class="nav__btn" data-route="arms">Arms Dealer</button>
+      <button class="nav__btn" data-route="properties">Properties</button>
+      <button class="nav__btn" data-route="missions">Missions</button>
+      <button class="nav__btn nav__btn--profile" data-route="profile">Profile</button>
+    </nav>
+
+    <main class="main">
+      <section class="panel" id="systemBanner" aria-live="polite"></section>
+
+      <!-- SPECIALIZATION GATE -->
+      <section class="panel gate" id="specGate" hidden>
+        <div class="gate__card">
+          <h1 class="gate__title">Choose Your Specialization</h1>
+          <p class="gate__subtitle">
+            This choice is permanent and cannot be changed.
+          </p>
+
+          <div class="spec-grid">
+            <button class="card card--spec" data-action="pickSpec" data-spec="enforcer">
+              <div class="card__title">🧱 Enforcer</div>
+              <div class="card__text">Fight-focused. Deal more damage and take slightly less.</div>
+            </button>
+            <button class="card card--spec" data-action="pickSpec" data-spec="mastermind">
+              <div class="card__title">🧠 Mastermind</div>
+              <div class="card__text">Crime-focused. Higher success chance and slightly less jail risk.</div>
+            </button>
+            <button class="card card--spec" data-action="pickSpec" data-spec="tycoon">
+              <div class="card__title">🏢 Tycoon</div>
+              <div class="card__text">Economy-focused. More property income and cheaper upgrades.</div>
+            </button>
+            <button class="card card--spec" data-action="pickSpec" data-spec="athlete">
+              <div class="card__title">🏋️ Athlete</div>
+              <div class="card__text">Training-focused. Better gym success and cheaper gym actions.</div>
+            </button>
+          </div>
+        </div>
+      </section>
+
+      <!-- ROUTED PAGES -->
+      <section class="page" id="page-crimes" data-page="crimes"></section>
+      <section class="page" id="page-fights" data-page="fights" hidden></section>
+      <section class="page" id="page-gym" data-page="gym" hidden></section>
+      <section class="page" id="page-shop" data-page="shop" hidden></section>
+      <section class="page" id="page-arms" data-page="arms" hidden></section>
+      <section class="page" id="page-properties" data-page="properties" hidden></section>
+      <section class="page" id="page-missions" data-page="missions" hidden></section>
+
+      <!-- PROFILE "SEPARATE PAGE" + SUBPAGES -->
+      <section class="page page--profile" id="page-profile" data-page="profile" hidden>
+        <div class="profile-shell">
+          <div class="profile-header card card--premium">
+            <div class="profile-id">
+              <div class="avatar" id="profileAvatar">🙂</div>
+              <div class="profile-id__meta">
+                <div class="profile-id__name" id="profileName">Player</div>
+                <div class="profile-id__badges">
+                  <span class="badge" id="profileTitleBadge">Street Rat</span>
+                  <span class="badge badge--outline" id="profileSpecBadge">Specialization</span>
+                </div>
+              </div>
+              <button class="btn btn--secondary btn--small" data-action="changeAvatar">Change Emoji</button>
+            </div>
+
+            <div class="meters">
+              <div class="meter">
+                <div class="meter__top">
+                  <span>XP</span>
+                  <span id="xpText">0 / 100</span>
+                </div>
+                <div class="bar"><div class="bar__fill" id="xpBar"></div></div>
+              </div>
+
+              <div class="meter">
+                <div class="meter__top">
+                  <span>Energy</span>
+                  <span id="energyText">0/0</span>
+                </div>
+                <div class="bar bar--energy"><div class="bar__fill" id="energyBar"></div></div>
+              </div>
+
+              <div class="meter">
+                <div class="meter__top">
+                  <span>Health</span>
+                  <span id="healthText">0/0</span>
+                </div>
+                <div class="bar bar--health"><div class="bar__fill" id="healthBar"></div></div>
+              </div>
+            </div>
+
+            <div class="stat-grid">
+              <div class="stat">
+                <div class="stat__label">Level</div>
+                <div class="stat__value" id="statLevel">1</div>
+              </div>
+              <div class="stat">
+                <div class="stat__label">Attack</div>
+                <div class="stat__value" id="statAtk">0</div>
+              </div>
+              <div class="stat">
+                <div class="stat__label">Defense</div>
+                <div class="stat__value" id="statDef">0</div>
+              </div>
+              <div class="stat">
+                <div class="stat__label">Passive Income</div>
+                <div class="stat__value" id="statIncome">$0/hr</div>
+              </div>
+              <div class="stat">
+                <div class="stat__label">Jail</div>
+                <div class="stat__value" id="statJail">No</div>
+              </div>
+              <div class="stat">
+                <div class="stat__label">KO</div>
+                <div class="stat__value" id="statKO">No</div>
+              </div>
+            </div>
+          </div>
+
+          <div class="profile-body">
+            <section class="profile-view" id="profileView-overview" data-profile-view="overview">
+              <div class="section-title">My Stuff</div>
+              <div class="hub-grid">
+                <button class="card hub-card" data-action="openProfileView" data-view="inventory">
+                  <div class="hub-card__title">🎒 Inventory</div>
+                  <div class="hub-card__text">Food, healing, and items you own.</div>
+                </button>
+                <button class="card hub-card" data-action="openProfileView" data-view="gear">
+                  <div class="hub-card__title">🗡️ Weapons & Armor</div>
+                  <div class="hub-card__text">View purchases and equip gear.</div>
+                </button>
+                <button class="card hub-card" data-action="openProfileView" data-view="props">
+                  <div class="hub-card__title">🏠 Properties</div>
+                  <div class="hub-card__text">Owned buildings, income, and upgrades.</div>
+                </button>
+              </div>
+
+              <div class="section-title">Recent Activity</div>
+              <div class="card log" id="activityLog"></div>
+            </section>
+
+            <section class="profile-view" id="profileView-inventory" data-profile-view="inventory" hidden>
+              <div class="subhead">
+                <button class="btn btn--secondary btn--small" data-action="openProfileView" data-view="overview">← Back</button>
+                <div class="subhead__title">Inventory</div>
+              </div>
+              <div class="card" id="profileInventory"></div>
+            </section>
+
+            <section class="profile-view" id="profileView-gear" data-profile-view="gear" hidden>
+              <div class="subhead">
+                <button class="btn btn--secondary btn--small" data-action="openProfileView" data-view="overview">← Back</button>
+                <div class="subhead__title">Weapons & Armor</div>
+              </div>
+              <div class="card" id="profileGear"></div>
+            </section>
+
+            <section class="profile-view" id="profileView-props" data-profile-view="props" hidden>
+              <div class="subhead">
+                <button class="btn btn--secondary btn--small" data-action="openProfileView" data-view="overview">← Back</button>
+                <div class="subhead__title">Properties</div>
+              </div>
+              <div class="card" id="profileProps"></div>
+              <div class="hint">Offline property income is capped at <b>4 hours</b>.</div>
+            </section>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <footer class="footer">
+      <div class="footer__left">Tip: GitHub Pages friendly. Everything saves in your browser (localStorage).</div>
+      <div class="footer__right">
+        <button class="btn btn--danger btn--small" data-action="hardReset">Reset Save</button>
+      </div>
+    </footer>
+  </div>
+
+  <div class="toast" id="toast" hidden></div>
+
+  <script src="./app.js"></script>
+</body>
+</html>
 
