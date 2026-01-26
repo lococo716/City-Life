@@ -4,6 +4,7 @@
    Compatible with your index.html + styles.css
    GitHub Pages safe (localStorage only)
    ========================================================= */
+console.log("✅ app.js LOADED", new Date().toISOString());
 
 "use strict";
 
@@ -26,6 +27,7 @@ const PROPERTY_OFFLINE_CAP = 4 * MS.HOUR;      // (later)
 /* =====================
    SPECIALIZATIONS
 ===================== */
+console.log("✅ pickSpec CLICKED", btn.dataset.spec);
 
 const SPECIALIZATIONS = {
   enforcer: {
