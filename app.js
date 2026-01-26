@@ -1,7 +1,8 @@
 /* =========================================================
    Underworld – Mafia Wars–style Web Game
    app.js (Specializations DISABLED for now)
-   Properties Step 1 + Step 2 + Step 3 + Step 4 INCLUDED
+   Properties Step 1 + 2 + 3 + 4 INCLUDED
+   Option 1 Step 1: Property Training Bonus ENABLED (Gym success boost)
    Compatible with your index.html + styles.css
    ========================================================= */
 
@@ -163,7 +164,7 @@ const ARMOR = [
 ];
 
 /* =====================
-   PROPERTIES (Step 1)
+   PROPERTIES
 ===================== */
 
 const PROPERTIES = [
@@ -210,7 +211,7 @@ const PROPERTIES = [
 ];
 
 /* =====================
-   PROPERTIES — HELPERS (Step 3/4)
+   PROPERTIES — HELPERS
 ===================== */
 
 function getOwnedPropertyLevel(propId) {
@@ -225,22 +226,11 @@ function getUpgradeCost(propId) {
   const p = PROPERTIES.find(x => x.id === propId);
   if (!p) return Infinity;
   const lvl = getOwnedPropertyLevel(propId);
-  if (lvl <= 0) return Infinity;         // can't upgrade if not owned
-  if (lvl >= p.maxLevel) return Infinity; // maxed
+  if (lvl <= 0) return Infinity;
+  if (lvl >= p.maxLevel) return Infinity;
   const cost = p.upgradeBaseCost * Math.pow(PROPERTY_UPGRADE_GROWTH, Math.max(0, lvl - 1));
   return Math.round(cost);
 }
-
-function getPropertyIncomePerHour(propId) {
-  const p = PROPERTIES.find(x => x.id === propId);
-  if (!p) return 0;
-  const lvl = getOwnedPropertyLevel(propId);
-  return lvl > 0 ? p.baseIncomePerHour * lvl : 0;
-}
-
-/* =====================
-   PROPERTIES — INCOME ENGINE (Step 2)
-===================== */
 
 function getTotalIncomePerHour() {
   let total = 0;
@@ -250,6 +240,10 @@ function getTotalIncomePerHour() {
   }
   return total;
 }
+
+/* =====================
+   PROPERTIES — INCOME ENGINE
+===================== */
 
 function applyPropertyIncome() {
   if (!state.properties) return;
@@ -322,10 +316,9 @@ function defaultState() {
       offerWeapon: null,
     },
 
-    // PROPERTIES
     properties: {
       lastIncomeAt: now,
-      owned: {}, // { propId: { level: number } }
+      owned: {}, // { propId: { level:number } }
     },
 
     rivals: { defeatedCounts: {} },
@@ -406,7 +399,6 @@ function sanitize(s) {
   if (typeof s.properties.lastIncomeAt !== "number") s.properties.lastIncomeAt = Date.now();
   s.properties.owned = s.properties.owned || {};
 
-  // ensure levels are sane integers
   for (const p of PROPERTIES) {
     const entry = s.properties.owned[p.id];
     if (!entry) continue;
@@ -518,10 +510,7 @@ function buyShopItem(kind, itemId) {
   const item = list.find(x => x.id === itemId);
   if (!item) return;
 
-  if (state.player.money < item.price) {
-    toast("Not enough money.");
-    return;
-  }
+  if (state.player.money < item.price) return toast("Not enough money.");
 
   state.player.money -= item.price;
 
@@ -652,7 +641,7 @@ function buyArms(kind, itemId, source = "arms") {
 }
 
 /* =====================
-   PROPERTIES (Step 3 + Step 4 actions)
+   PROPERTIES (buy + upgrade)
 ===================== */
 
 function ensureProperties() {
@@ -697,6 +686,24 @@ function upgradeProperty(propId) {
   toast("Upgraded");
 }
 /* =====================
+   PROPERTY TRAINING BONUS (Option 1 Step 1)
+===================== */
+
+function propertyTrainingBonus() {
+  let bonus = 0;
+
+  for (const p of PROPERTIES) {
+    const lvl = getOwnedPropertyLevel(p.id);
+    if (lvl > 0 && p.trainingBoostPerLevel) {
+      bonus += lvl * p.trainingBoostPerLevel;
+    }
+  }
+
+  // hard cap: +15% total success chance max
+  return clamp(bonus, 0, 0.15);
+}
+
+/* =====================
    XP / LEVEL UPS
 ===================== */
 
@@ -729,6 +736,7 @@ function tryLevelUp() {
 function equippedAttackBonus() {
   return state.equipment?.weapon?.atk || 0;
 }
+
 function equippedDefenseBonus() {
   return state.equipment?.armor?.def || 0;
 }
@@ -736,6 +744,7 @@ function equippedDefenseBonus() {
 function playerAtk() {
   return Math.max(0, state.player.attack + equippedAttackBonus());
 }
+
 function playerDef() {
   return Math.max(0, state.player.defense + equippedDefenseBonus());
 }
@@ -748,22 +757,19 @@ function doCrime(crimeId) {
   const c = CRIMES.find(x => x.id === crimeId);
   if (!c) return;
 
-  if (isJailed()) return toast("You're in jail. Wait it out.");
-  if (isKO()) return toast("You're KO'd. Heal up first.");
+  if (isJailed()) return toast("You're in jail.");
+  if (isKO()) return toast("You're KO'd.");
   if (state.player.level < c.unlock) return toast(`Unlocks at Level ${c.unlock}.`);
   if (state.player.energy < c.energy) return toast("Not enough energy.");
 
   state.player.energy -= c.energy;
 
-  const successChance = clamp(c.success, 0.05, 0.95);
-  const jailChance = clamp(c.jail, 0.0, 0.95);
-
-  if (Math.random() <= successChance) {
+  if (Math.random() <= clamp(c.success, 0.05, 0.95)) {
     const cash = randInt(c.money[0], c.money[1]);
     state.player.money += cash;
     state.player.xp += c.xp;
 
-    addLog(`✅ ${c.name}: Success. +$${cash}, +${c.xp} XP`);
+    addLog(`✅ ${c.name}: +$${cash}, +${c.xp} XP`);
     toast(`Success! +$${cash}`);
     tryLevelUp();
     return;
@@ -772,15 +778,14 @@ function doCrime(crimeId) {
   const hpLoss = randInt(c.hpLoss[0], c.hpLoss[1]);
   state.player.health = clamp(state.player.health - hpLoss, 0, state.player.maxHealth);
 
-  const gotJailed = Math.random() <= jailChance;
-  if (gotJailed) {
+  if (Math.random() <= c.jail) {
     const jailMins = randInt(c.jailMin, c.jailMax);
     state.timers.jailUntil = Date.now() + jailMins * MS.MIN;
-    addLog(`🚔 ${c.name}: Caught! -${hpLoss} HP, jailed for ${jailMins} min.`);
-    toast(`Caught! Jailed ${jailMins} min`);
+    addLog(`🚔 ${c.name}: Jailed ${jailMins} min (-${hpLoss} HP)`);
+    toast("Caught!");
   } else {
-    addLog(`❌ ${c.name}: Failed. -${hpLoss} HP (you got away).`);
-    toast("Failed (got away)");
+    addLog(`❌ ${c.name}: Failed (-${hpLoss} HP)`);
+    toast("Failed");
   }
 }
 
@@ -788,23 +793,26 @@ function doCrime(crimeId) {
    FIGHTS
 ===================== */
 
-function calcDamage(attackerAtk, defenderDef) {
-  const base = attackerAtk - Math.floor(defenderDef * 0.6);
+function calcDamage(atk, def) {
+  const base = atk - Math.floor(def * 0.6);
   return Math.max(1, base);
 }
 
 function doFight(kind, id) {
-  if (isJailed()) return toast("You're in jail. No fights right now.");
-  if (isKO()) return toast("You're KO'd. Heal up first.");
+  if (isJailed()) return toast("You're in jail.");
+  if (isKO()) return toast("You're KO'd.");
 
   let target = null;
   let isRival = false;
 
   if (kind === "enemy") target = ENEMIES.find(x => x.id === id);
-  if (kind === "rival") { target = RIVALS.find(x => x.id === id); isRival = true; }
+  if (kind === "rival") {
+    target = RIVALS.find(x => x.id === id);
+    isRival = true;
+  }
   if (!target) return;
 
-  if (state.player.level < target.unlock) return toast(`Unlocks at Level ${target.unlock}.`);
+  if (state.player.level < target.unlock) return toast(`Unlocks at Lv ${target.unlock}.`);
   if (state.player.energy < target.energy) return toast("Not enough energy.");
 
   state.player.energy -= target.energy;
@@ -812,13 +820,11 @@ function doFight(kind, id) {
   let enemyHP = target.hp;
   let playerHP = state.player.health;
 
-  for (let round = 0; round < 6; round++) {
-    const pDmg = calcDamage(playerAtk(), target.def);
-    enemyHP -= pDmg;
+  for (let i = 0; i < 6; i++) {
+    enemyHP -= calcDamage(playerAtk(), target.def);
     if (enemyHP <= 0) break;
 
-    const eDmg = calcDamage(target.atk, playerDef());
-    playerHP -= eDmg;
+    playerHP -= calcDamage(target.atk, playerDef());
     if (playerHP <= 0) break;
   }
 
@@ -830,81 +836,61 @@ function doFight(kind, id) {
     state.player.money += cash;
     state.player.xp += target.xp;
 
-    if (!isRival) {
-      state.player.reputation += (target.rep || 0);
-    } else {
-      const wins = (state.rivals?.defeatedCounts?.[id] || 0) + 1;
+    if (isRival) {
+      const wins = (state.rivals.defeatedCounts[id] || 0) + 1;
       state.rivals.defeatedCounts[id] = wins;
-
-      if (wins === 1 || wins === 3 || wins === 5) {
-        const idx = wins === 1 ? 0 : wins === 3 ? 1 : 2;
-        const repGain = target.repMilestone?.[idx] || 0;
-        state.player.reputation += repGain;
-        addLog(`🏷️ Rival milestone! +${repGain} reputation.`);
-      }
+    } else {
+      state.player.reputation += target.rep || 0;
     }
 
-    addLog(`🥊 Won vs ${target.name}. +$${cash}, +${target.xp} XP`);
-    toast(`Win! +$${cash}`);
+    addLog(`🥊 Beat ${target.name} +$${cash}`);
+    toast("Victory!");
     tryLevelUp();
   } else {
-    const consolationXP = Math.floor(target.xp * 0.25);
-    state.player.xp += consolationXP;
-    addLog(`💥 Lost vs ${target.name}. +${consolationXP} XP`);
-    toast("You lost the fight");
+    state.player.xp += Math.floor(target.xp * 0.25);
+    addLog(`💥 Lost vs ${target.name}`);
+    toast("Defeated");
     tryLevelUp();
   }
 }
 
 /* =====================
-   GYM ACTIONS
+   GYM ACTIONS (WITH PROPERTY BONUS)
 ===================== */
 
-function propertyTrainingBonus() {
-  // Training boost comes later — properties have data ready though
-  return 0;
-}
-
-function msToClock(ms) {
-  if (ms <= 0) return "0:00";
-  const totalSec = Math.ceil(ms / 1000);
-  const m = Math.floor(totalSec / 60);
-  const s = totalSec % 60;
-  return `${m}:${String(s).padStart(2, "0")}`;
-}
-
 function doGym(statKey) {
-  if (isKO()) return toast("You're KO'd. Heal first.");
+  if (isKO()) return toast("You're KO'd.");
 
   const jailed = isJailed();
   const gym = jailed ? GYM.jail : GYM.normal;
 
-  const energyCost = gym.energy;
-  const successChance = clamp(gym.success + propertyTrainingBonus(), 0.05, 0.95);
+  if (state.player.energy < gym.energy) return toast("Not enough energy.");
+  if (!["attack", "defense"].includes(statKey)) return;
 
-  if (state.player.energy < energyCost) return toast("Not enough energy.");
-  if (statKey !== "attack" && statKey !== "defense") return;
+  state.player.energy -= gym.energy;
 
-  state.player.energy -= energyCost;
+  const successChance = clamp(
+    gym.success + propertyTrainingBonus(),
+    0.05,
+    0.95
+  );
 
   if (Math.random() <= successChance) {
     state.player[statKey] += gym.gain[statKey];
     state.player.xp += gym.xp;
-    addLog(`🏋️ ${gym.name}: Success. +${gym.gain[statKey]} ${statKey.toUpperCase()}, +${gym.xp} XP`);
-    toast("Training success!");
+
+    addLog(`🏋️ ${gym.name}: +1 ${statKey.toUpperCase()} (+${pct(propertyTrainingBonus())}% bonus)`);
+    toast("Training success");
     tryLevelUp();
-    return;
+  } else {
+    const hpLoss = randInt(gym.failHpLoss[0], gym.failHpLoss[1]);
+    state.player.health = clamp(state.player.health - hpLoss, 0, state.player.maxHealth);
+    state.player.xp += Math.floor(gym.xp * 0.25);
+
+    addLog(`💥 ${gym.name}: Failed (-${hpLoss} HP)`);
+    toast("Training failed");
+    tryLevelUp();
   }
-
-  const hpLoss = randInt(gym.failHpLoss[0], gym.failHpLoss[1]);
-  state.player.health = clamp(state.player.health - hpLoss, 0, state.player.maxHealth);
-
-  const consolationXP = Math.floor(gym.xp * 0.25);
-  state.player.xp += consolationXP;
-
-  addLog(`💥 ${gym.name}: Failed. -${hpLoss} HP, +${consolationXP} XP`);
-  toast("Training failed");
-  tryLevelUp();
 }
 
 /* =====================
@@ -919,6 +905,57 @@ function updateTitle() {
     }
   }
 }
+/* =====================
+   TIME FORMAT
+===================== */
+
+function msToClock(ms) {
+  if (ms <= 0) return "0:00";
+  const totalSec = Math.ceil(ms / 1000);
+  const m = Math.floor(totalSec / 60);
+  const s = totalSec % 60;
+  return `${m}:${String(s).padStart(2, "0")}`;
+}
+
+/* =====================
+   DOM REFERENCES
+===================== */
+
+const hudMoney = document.getElementById("hudMoney");
+const hudLevel = document.getElementById("hudLevel");
+const hudTitle = document.getElementById("hudTitle");
+
+const profileAvatar = document.getElementById("profileAvatar");
+const profileName = document.getElementById("profileName");
+const profileTitleBadge = document.getElementById("profileTitleBadge");
+const profileSpecBadge = document.getElementById("profileSpecBadge");
+
+const xpText = document.getElementById("xpText");
+const xpBar = document.getElementById("xpBar");
+const energyText = document.getElementById("energyText");
+const energyBar = document.getElementById("energyBar");
+const healthText = document.getElementById("healthText");
+const healthBar = document.getElementById("healthBar");
+
+const statLevel = document.getElementById("statLevel");
+const statAtk = document.getElementById("statAtk");
+const statDef = document.getElementById("statDef");
+const statIncome = document.getElementById("statIncome");
+const statJail = document.getElementById("statJail");
+const statKO = document.getElementById("statKO");
+
+const activityLog = document.getElementById("activityLog");
+
+const pageCrimes = document.getElementById("page-crimes");
+const pageFights = document.getElementById("page-fights");
+const pageGym = document.getElementById("page-gym");
+const pageShop = document.getElementById("page-shop");
+const pageArms = document.getElementById("page-arms");
+const pageProperties = document.getElementById("page-properties");
+
+const profileInventoryBox = document.getElementById("profileInventory");
+const profileGearBox = document.getElementById("profileGear");
+const profilePropsBox = document.getElementById("profileProps");
 
 /* =====================
    PAGE RENDERS
@@ -1027,7 +1064,7 @@ function renderFightsPage() {
   pageFights.innerHTML = `
     <div class="card">
       <div class="section-title">Fights</div>
-      <div class="muted">Battle enemies for cash, XP, and reputation. Rivals give milestone rep.</div>
+      <div class="muted">Battle enemies for cash, XP, and reputation.</div>
       <div class="hr"></div>
       <div class="muted">Status: ${jailed ? `🚔 In Jail` : ko ? `💫 KO (heal first)` : `✅ Free`}</div>
     </div>
@@ -1047,19 +1084,22 @@ function renderFightsPage() {
 function renderGymPage() {
   const jailed = isJailed();
   const ko = isKO();
+  const gym = jailed ? GYM.jail : GYM.normal;
 
-  const activeGym = jailed ? GYM.jail : GYM.normal;
+  const bonus = propertyTrainingBonus();
+  const shownChance = clamp(gym.success + bonus, 0.05, 0.95);
 
   pageGym.innerHTML = `
     <div class="card">
-      <div class="section-title">${activeGym.name}</div>
+      <div class="section-title">${gym.name}</div>
       <div class="muted">
         Train to increase Attack / Defense.
+        ${bonus > 0 ? `<br>🏠 Property boost: <b>+${pct(bonus)}%</b> gym success` : ``}
         ${jailed ? `<br><b>Jail Gym is only visible while jailed.</b>` : ``}
       </div>
       <div class="hr"></div>
       <div class="muted">
-        Cost: ${activeGym.energy} Energy • Success: ${pct(activeGym.success + propertyTrainingBonus())}% • +${activeGym.xp} XP
+        Cost: ${gym.energy} Energy • Success: <b>${pct(shownChance)}%</b> • +${gym.xp} XP
       </div>
     </div>
 
@@ -1068,14 +1108,14 @@ function renderGymPage() {
         <button class="btn btn--primary"
           data-action="doGym"
           data-stat="attack"
-          ${ko || state.player.energy < activeGym.energy ? "disabled" : ""}>
+          ${ko || state.player.energy < gym.energy ? "disabled" : ""}>
           Train Attack (+1)
         </button>
 
         <button class="btn btn--success"
           data-action="doGym"
           data-stat="defense"
-          ${ko || state.player.energy < activeGym.energy ? "disabled" : ""}>
+          ${ko || state.player.energy < gym.energy ? "disabled" : ""}>
           Train Defense (+1)
         </button>
       </div>
@@ -1235,10 +1275,6 @@ function renderArmsPage() {
   `;
 }
 
-/* =====================
-   PROPERTIES PAGE (Step 3 + 4 UI)
-===================== */
-
 function renderPropertiesPage() {
   const incomeHr = getTotalIncomePerHour();
 
@@ -1306,6 +1342,48 @@ function renderPropertiesPage() {
 /* =====================
    PROFILE RENDERS
 ===================== */
+
+function renderHUD() {
+  hudMoney.textContent = fmtMoney(state.player.money);
+  hudLevel.textContent = `Lv ${state.player.level}`;
+  hudTitle.textContent = state.player.title;
+}
+
+function openProfileView(view) {
+  document.querySelectorAll("[data-profile-view]").forEach(v => {
+    v.hidden = v.dataset.profileView !== view;
+  });
+  state.ui.profileView = view;
+  save();
+}
+
+function renderProfileTop() {
+  profileAvatar.textContent = state.player.avatar;
+  profileName.textContent = state.player.name;
+  profileTitleBadge.textContent = state.player.title;
+  if (profileSpecBadge) profileSpecBadge.textContent = "No Specialization";
+
+  const xpNeed = xpNeededForLevel(state.player.level);
+  xpText.textContent = `${state.player.xp} / ${xpNeed}`;
+  xpBar.style.width = `${(state.player.xp / xpNeed) * 100}%`;
+
+  energyText.textContent = `${state.player.energy}/${state.player.maxEnergy}`;
+  energyBar.style.width = `${(state.player.energy / state.player.maxEnergy) * 100}%`;
+
+  healthText.textContent = `${state.player.health}/${state.player.maxHealth}`;
+  healthBar.style.width = `${(state.player.health / state.player.maxHealth) * 100}%`;
+
+  statLevel.textContent = state.player.level;
+  statAtk.textContent = state.player.attack;
+  statDef.textContent = state.player.defense;
+  statIncome.textContent = `${fmtMoney(getTotalIncomePerHour())}/hr`;
+
+  statJail.textContent = isJailed() ? "Yes" : "No";
+  statKO.textContent = isKO() ? "Yes" : "No";
+
+  activityLog.innerHTML = state.ui.log.join("<br>");
+  openProfileView(state.ui.profileView);
+}
 
 function renderProfileInventory() {
   if (!profileInventoryBox) return;
@@ -1438,45 +1516,6 @@ function renderProfileProps() {
     </div>
   `;
 }
-/* =====================
-   DOM REFERENCES
-===================== */
-
-const hudMoney = document.getElementById("hudMoney");
-const hudLevel = document.getElementById("hudLevel");
-const hudTitle = document.getElementById("hudTitle");
-
-const profileAvatar = document.getElementById("profileAvatar");
-const profileName = document.getElementById("profileName");
-const profileTitleBadge = document.getElementById("profileTitleBadge");
-const profileSpecBadge = document.getElementById("profileSpecBadge");
-
-const xpText = document.getElementById("xpText");
-const xpBar = document.getElementById("xpBar");
-const energyText = document.getElementById("energyText");
-const energyBar = document.getElementById("energyBar");
-const healthText = document.getElementById("healthText");
-const healthBar = document.getElementById("healthBar");
-
-const statLevel = document.getElementById("statLevel");
-const statAtk = document.getElementById("statAtk");
-const statDef = document.getElementById("statDef");
-const statIncome = document.getElementById("statIncome");
-const statJail = document.getElementById("statJail");
-const statKO = document.getElementById("statKO");
-
-const activityLog = document.getElementById("activityLog");
-
-const pageCrimes = document.getElementById("page-crimes");
-const pageFights = document.getElementById("page-fights");
-const pageGym = document.getElementById("page-gym");
-const pageShop = document.getElementById("page-shop");
-const pageArms = document.getElementById("page-arms");
-const pageProperties = document.getElementById("page-properties");
-
-const profileInventoryBox = document.getElementById("profileInventory");
-const profileGearBox = document.getElementById("profileGear");
-const profilePropsBox = document.getElementById("profileProps");
 
 /* =====================
    NAVIGATION
@@ -1503,18 +1542,6 @@ topNav.addEventListener("click", e => {
 });
 
 /* =====================
-   PROFILE SUBVIEWS
-===================== */
-
-function openProfileView(view) {
-  document.querySelectorAll("[data-profile-view]").forEach(v => {
-    v.hidden = v.dataset.profileView !== view;
-  });
-  state.ui.profileView = view;
-  save();
-}
-
-/* =====================
    CLICK HANDLER
 ===================== */
 
@@ -1538,7 +1565,6 @@ document.body.addEventListener("click", e => {
   if (a === "equipWeapon") equipWeaponByIndex(+btn.dataset.idx);
   if (a === "equipArmor") equipArmorByIndex(+btn.dataset.idx);
 
-  // PROPERTIES (Step 3 + 4)
   if (a === "buyProperty") buyProperty(btn.dataset.prop);
   if (a === "upgradeProperty") upgradeProperty(btn.dataset.prop);
 
@@ -1550,45 +1576,6 @@ document.body.addEventListener("click", e => {
   save();
   render();
 });
-
-/* =====================
-   HUD + PROFILE TOP
-===================== */
-
-function renderHUD() {
-  hudMoney.textContent = fmtMoney(state.player.money);
-  hudLevel.textContent = `Lv ${state.player.level}`;
-  hudTitle.textContent = state.player.title;
-}
-
-function renderProfileTop() {
-  profileAvatar.textContent = state.player.avatar;
-  profileName.textContent = state.player.name;
-  profileTitleBadge.textContent = state.player.title;
-  if (profileSpecBadge) profileSpecBadge.textContent = "No Specialization";
-
-  const xpNeed = xpNeededForLevel(state.player.level);
-  xpText.textContent = `${state.player.xp} / ${xpNeed}`;
-  xpBar.style.width = `${(state.player.xp / xpNeed) * 100}%`;
-
-  energyText.textContent = `${state.player.energy}/${state.player.maxEnergy}`;
-  energyBar.style.width = `${(state.player.energy / state.player.maxEnergy) * 100}%`;
-
-  healthText.textContent = `${state.player.health}/${state.player.maxHealth}`;
-  healthBar.style.width = `${(state.player.health / state.player.maxHealth) * 100}%`;
-
-  statLevel.textContent = state.player.level;
-  statAtk.textContent = state.player.attack;
-  statDef.textContent = state.player.defense;
-
-  statIncome.textContent = `${fmtMoney(getTotalIncomePerHour())}/hr`;
-
-  statJail.textContent = isJailed() ? "Yes" : "No";
-  statKO.textContent = isKO() ? "Yes" : "No";
-
-  activityLog.innerHTML = state.ui.log.join("<br>");
-  openProfileView(state.ui.profileView);
-}
 
 /* =====================
    MAIN RENDER LOOP
@@ -1613,7 +1600,7 @@ function render() {
   renderProfileGear();
   renderProfileProps();
 
-  // Tabs availability: in jail only Profile works; KO blocks fights/crimes too
+  // In jail only Profile tab works
   navButtons.forEach(btn => {
     if (isJailed()) {
       btn.disabled = btn.dataset.route !== "profile";
