@@ -1,6 +1,6 @@
 /* =========================================================
    Underworld – Mafia Wars–style Web Game
-   app.js (Complete up through PATCH F6)
+   app.js (FULL, up through Arms Dealer patches)
    Compatible with your index.html + styles.css
    GitHub Pages safe (localStorage only)
    ========================================================= */
@@ -20,7 +20,7 @@ const MS = {
 };
 
 const REGEN_INTERVAL = 5 * MS.MIN;             // 1 per 5 minutes
-const BLACK_MARKET_REFRESH = 45 * MS.MIN;      // (later)
+const BLACK_MARKET_REFRESH = 45 * MS.MIN;      // black market refresh
 const PROPERTY_OFFLINE_CAP = 4 * MS.HOUR;      // (later)
 
 /* =====================
@@ -70,7 +70,6 @@ function clamp(v, min, max) {
   return Math.max(min, Math.min(max, v));
 }
 
-// random int inclusive
 function randInt(min, max) {
   return Math.floor(Math.random() * (max - min + 1)) + min;
 }
@@ -115,27 +114,89 @@ const CRIMES = [
 ===================== */
 
 const ENEMIES = [
-  // Early (Lv 1–5)
   { id:"thug",      name:"Street Thug",            unlock:1,  energy:3, atk:1, def:1, hp:6,  money:[60,120],  xp:10, rep:1 },
   { id:"brawler",   name:"Back-Alley Brawler",     unlock:2,  energy:3, atk:2, def:1, hp:7,  money:[80,150],  xp:12, rep:1 },
   { id:"hustler",   name:"Corner Hustler",         unlock:3,  energy:4, atk:2, def:2, hp:8,  money:[110,200], xp:14, rep:1 },
   { id:"enforcer",  name:"Local Enforcer",         unlock:5,  energy:4, atk:3, def:2, hp:10, money:[160,280], xp:18, rep:2 },
 
-  // Mid (Lv 6–12)
   { id:"crew",      name:"Crew Muscle",            unlock:7,  energy:5, atk:4, def:3, hp:12, money:[220,380], xp:24, rep:2 },
   { id:"hitman",    name:"Contract Hitman",        unlock:9,  energy:6, atk:5, def:4, hp:14, money:[300,520], xp:30, rep:3 },
   { id:"captain",   name:"Gang Captain",           unlock:11, energy:6, atk:6, def:5, hp:16, money:[380,680], xp:34, rep:3 },
 
-  // Late (Lv 13+)
   { id:"bossguard", name:"Boss Bodyguard",         unlock:13, energy:7, atk:7, def:6, hp:18, money:[520,900], xp:40, rep:4 },
   { id:"underboss", name:"Underboss Shadow",       unlock:15, energy:7, atk:8, def:7, hp:20, money:[650,1100],xp:46, rep:4 },
 ];
 
 const RIVALS = [
-  // Rival milestones at 1/3/5 wins
   { id:"vince", name:"Vince 'Knuckles' Romano",    unlock:4,  energy:6, atk:5, def:4, hp:16, money:[260,520],  xp:32, repMilestone:[4,6,10] },
   { id:"nyla",  name:"Nyla 'Switchblade' Cruz",    unlock:8,  energy:7, atk:7, def:6, hp:20, money:[420,780],  xp:44, repMilestone:[6,8,12] },
   { id:"marco", name:"Marco 'The Fixer' Valli",    unlock:12, energy:8, atk:9, def:8, hp:24, money:[620,1100], xp:58, repMilestone:[8,10,14] },
+];
+
+/* =====================
+   GYM: NORMAL + JAIL GYM
+   Jail Gym is only shown when jailed
+===================== */
+
+const GYM = {
+  normal: {
+    name: "Gym",
+    energy: 4,
+    success: 0.70,
+    xp: 18,
+    failHpLoss: [0, 2],
+    gain: { attack: 1, defense: 1 },
+  },
+  jail: {
+    name: "Jail Gym",
+    energy: 3,
+    success: 0.60,
+    xp: 14,
+    failHpLoss: [0, 2],
+    gain: { attack: 1, defense: 1 },
+  },
+};
+
+/* =====================
+   SHOP ITEMS (Food + Healing)
+===================== */
+
+const SHOP_FOOD = [
+  { id:"chips",  name:"🥔 Chips",        desc:"+2 Energy",  price:60,  energy:2 },
+  { id:"burger", name:"🍔 Burger",       desc:"+4 Energy",  price:120, energy:4 },
+  { id:"taco",   name:"🌮 Taco",         desc:"+6 Energy",  price:180, energy:6 },
+  { id:"pizza",  name:"🍕 Pizza Slice",  desc:"+8 Energy",  price:260, energy:8 },
+  { id:"feast",  name:"🍱 Street Feast", desc:"+12 Energy", price:420, energy:12 },
+];
+
+const SHOP_HEALING = [
+  { id:"bandage", name:"🩹 Bandage",      desc:"+3 Health",  price:70,  health:3 },
+  { id:"medkit",  name:"🧰 Med Kit",      desc:"+6 Health",  price:140, health:6 },
+  { id:"stims",   name:"💉 Stims",        desc:"+9 Health",  price:220, health:9 },
+  { id:"clinic",  name:"🏥 Clinic Visit", desc:"+12 Health", price:320, health:12 },
+  { id:"surgery", name:"🧑‍⚕️ Surgery",     desc:"+18 Health", price:520, health:18 },
+  { id:"revive",  name:"⚡ Revive Shot",  desc:"+25 Health", price:780, health:25 },
+];
+
+/* =====================
+   ARMS DEALER (Weapons + Armor) + Black Market
+===================== */
+
+const WEAPONS = [
+  { id:"shiv",   name:"🔪 Shiv",   price:120,  atk:1 },
+  { id:"bat",    name:"🏏 Bat",    price:220,  atk:2 },
+  { id:"knife",  name:"🗡️ Knife", price:360,  atk:3 },
+  { id:"pistol", name:"🔫 Pistol", price:620,  atk:4 },
+  { id:"smg",    name:"🧨 SMG",    price:980,  atk:6 },
+  { id:"rifle",  name:"🎯 Rifle",  price:1400, atk:8 },
+];
+
+const ARMOR = [
+  { id:"hoodie",  name:"🧥 Reinforced Hoodie", price:140,  def:1 },
+  { id:"leather", name:"🧥 Leather Jacket",    price:260,  def:2 },
+  { id:"vest",    name:"🦺 Kevlar Vest",       price:520,  def:4 },
+  { id:"plate",   name:"🛡️ Plate Carrier",     price:980,  def:6 },
+  { id:"riot",    name:"🛡️ Riot Armor",        price:1500, def:8 },
 ];
 
 /* =====================
@@ -166,15 +227,22 @@ function defaultState() {
       lastEnergy: now,
       lastHealth: now,
       jailUntil: null,
-      blackMarket: now,
       propertyIncome: now,
     },
     inventory: {},
     equipment: {
-      weapon: null, // later: { id,name,atk,rarity }
-      armor: null,  // later: { id,name,def,rarity }
+      weapon: null, // {id,name,atk,rarity}
+      armor: null,  // {id,name,def,rarity}
     },
-    properties: {},
+    gear: {
+      weapons: [], // owned gear
+      armor: [],
+    },
+    blackMarket: {
+      nextRefreshAt: now + BLACK_MARKET_REFRESH,
+      offerWeapon: null, // {id,name,atk,rarity,price}
+    },
+    properties: {}, // (later)
     rivals: { defeatedCounts: {} },
     ui: {
       page: "crimes",
@@ -185,7 +253,7 @@ function defaultState() {
 }
 
 /* =====================
-   LOAD / SAVE
+   LOAD / SAVE / SANITIZE
 ===================== */
 
 let state = load();
@@ -210,28 +278,28 @@ function save(s = state) {
   localStorage.setItem(SAVE_KEY, JSON.stringify(s));
 }
 
-/* =====================
-   SANITIZE
-===================== */
-
 function sanitize(s) {
   const d = defaultState();
-  if (!s.schema) return d;
+  if (!s || !s.schema) return d;
 
   // ensure nested objects exist
   s.rivals = s.rivals || { defeatedCounts: {} };
   s.rivals.defeatedCounts = s.rivals.defeatedCounts || {};
+
+  s.ui = s.ui || {};
+  s.ui.log = Array.isArray(s.ui.log) ? s.ui.log : [];
+  s.ui.profileView = s.ui.profileView || "overview";
+  s.ui.page = s.ui.page || "crimes";
+
+  s.inventory = s.inventory || {};
+  s.equipment = s.equipment || { weapon: null, armor: null };
+
   s.gear = s.gear || { weapons: [], armor: [] };
   s.gear.weapons = Array.isArray(s.gear.weapons) ? s.gear.weapons : [];
   s.gear.armor = Array.isArray(s.gear.armor) ? s.gear.armor : [];
 
   s.blackMarket = s.blackMarket || { nextRefreshAt: Date.now() + BLACK_MARKET_REFRESH, offerWeapon: null };
   if (typeof s.blackMarket.nextRefreshAt !== "number") s.blackMarket.nextRefreshAt = Date.now() + BLACK_MARKET_REFRESH;
-
-  s.ui = s.ui || {};
-  s.ui.log = Array.isArray(s.ui.log) ? s.ui.log : [];
-  s.ui.profileView = s.ui.profileView || "overview";
-  s.ui.page = s.ui.page || "crimes";
 
   s.player.energy = clamp(s.player.energy ?? 0, 0, s.player.maxEnergy ?? 10);
   s.player.health = clamp(s.player.health ?? 0, 0, s.player.maxHealth ?? 10);
@@ -257,21 +325,13 @@ function applyRegen() {
 
   const eTicks = Math.floor((now - state.timers.lastEnergy) / REGEN_INTERVAL);
   if (eTicks > 0) {
-    state.player.energy = clamp(
-      state.player.energy + eTicks,
-      0,
-      state.player.maxEnergy
-    );
+    state.player.energy = clamp(state.player.energy + eTicks, 0, state.player.maxEnergy);
     state.timers.lastEnergy += eTicks * REGEN_INTERVAL;
   }
 
   const hTicks = Math.floor((now - state.timers.lastHealth) / REGEN_INTERVAL);
   if (hTicks > 0) {
-    state.player.health = clamp(
-      state.player.health + hTicks,
-      0,
-      state.player.maxHealth
-    );
+    state.player.health = clamp(state.player.health + hTicks, 0, state.player.maxHealth);
     state.timers.lastHealth += hTicks * REGEN_INTERVAL;
   }
 }
@@ -303,6 +363,7 @@ function toast(msg) {
   el.hidden = false;
   setTimeout(() => (el.hidden = true), 2200);
 }
+
 /* =====================
    INVENTORY HELPERS
 ===================== */
@@ -331,7 +392,6 @@ function invUse(itemId) {
   const it = state.inventory[itemId];
   if (!it || it.quantity <= 0) return;
 
-  // Apply effects
   if (it.energy > 0) {
     const before = state.player.energy;
     state.player.energy = clamp(state.player.energy + it.energy, 0, state.player.maxEnergy);
@@ -351,8 +411,38 @@ function invUse(itemId) {
   it.quantity -= 1;
   if (it.quantity <= 0) delete state.inventory[itemId];
 }
+
 /* =====================
-   GEAR HELPERS
+   SHOP BUY
+===================== */
+
+function buyShopItem(kind, itemId) {
+  const list = kind === "food" ? SHOP_FOOD : kind === "healing" ? SHOP_HEALING : null;
+  if (!list) return;
+
+  const item = list.find(x => x.id === itemId);
+  if (!item) return;
+
+  if (state.player.money < item.price) {
+    toast("Not enough money.");
+    return;
+  }
+
+  state.player.money -= item.price;
+
+  invAdd({
+    id: item.id,
+    name: item.name,
+    type: kind,
+    energy: item.energy || 0,
+    health: item.health || 0,
+  });
+
+  addLog(`🛒 Bought ${item.name} for $${item.price}`);
+  toast("Purchased");
+}
+/* =====================
+   GEAR HELPERS + BLACK MARKET
 ===================== */
 
 function ownWeapon(item) {
@@ -381,12 +471,7 @@ function equipArmorByIndex(idx) {
   toast("Armor equipped");
 }
 
-/* =====================
-   BLACK MARKET REFRESH
-===================== */
-
 function generateBlackMarketWeapon() {
-  // Pick a base weapon from the higher end
   const basePool = WEAPONS.slice(Math.max(0, WEAPONS.length - 3));
   const base = basePool[randInt(0, basePool.length - 1)];
 
@@ -402,7 +487,6 @@ function generateBlackMarketWeapon() {
     };
   }
 
-  // Normal black market (slightly boosted / pricier)
   const boost = randInt(1, 2);
   return {
     id: `bm_${base.id}_${Date.now()}`,
@@ -429,36 +513,6 @@ function refreshBlackMarketIfNeeded() {
 }
 
 /* =====================
-   SHOP BUY
-===================== */
-
-function buyShopItem(kind, itemId) {
-  const list = kind === "food" ? SHOP_FOOD : kind === "healing" ? SHOP_HEALING : null;
-  if (!list) return;
-
-  const item = list.find(x => x.id === itemId);
-  if (!item) return;
-
-  if (state.player.money < item.price) {
-    toast("Not enough money.");
-    return;
-  }
-
-  state.player.money -= item.price;
-
-  // Food always goes into inventory (same for healing)
-  invAdd({
-    id: item.id,
-    name: item.name,
-    type: kind,
-    energy: item.energy || 0,
-    health: item.health || 0,
-  });
-
-  addLog(`🛒 Bought ${item.name} for $${item.price}`);
-  toast("Purchased");
-}
-/* =====================
    ARMS BUY
 ===================== */
 
@@ -483,7 +537,6 @@ function buyArms(kind, itemId, source = "arms") {
     addLog(`🛒 Bought ${item.name} (Black Market) for $${item.price}`);
     toast("Purchased");
 
-    // Clear offer after purchase (optional, keeps it special)
     state.blackMarket.offerWeapon = null;
     return;
   }
@@ -513,7 +566,7 @@ function buyArms(kind, itemId, source = "arms") {
 ===================== */
 
 function xpNeededForLevel(level) {
-  return level * 100; // easy v1 curve
+  return level * 100;
 }
 
 function tryLevelUp() {
@@ -521,7 +574,6 @@ function tryLevelUp() {
     state.player.xp -= xpNeededForLevel(state.player.level);
     state.player.level += 1;
 
-    // mild growth: every 2 levels +1 max energy and max health
     if (state.player.level % 2 === 0) {
       state.player.maxEnergy += 1;
       state.player.maxHealth += 1;
@@ -533,6 +585,36 @@ function tryLevelUp() {
 
   state.player.energy = clamp(state.player.energy, 0, state.player.maxEnergy);
   state.player.health = clamp(state.player.health, 0, state.player.maxHealth);
+}
+
+/* =====================
+   SPECIALIZATION MODS
+===================== */
+
+function getSpecMods() {
+  const specId = state.player.specialization;
+  if (!specId) return {};
+  return SPECIALIZATIONS[specId]?.mods || {};
+}
+
+/* =====================
+   EQUIPMENT HOOKS
+===================== */
+
+function equippedAttackBonus() {
+  const w = state.equipment?.weapon;
+  return w?.atk || 0;
+}
+function equippedDefenseBonus() {
+  const a = state.equipment?.armor;
+  return a?.def || 0;
+}
+
+function playerAtk() {
+  return Math.max(0, state.player.attack + equippedAttackBonus());
+}
+function playerDef() {
+  return Math.max(0, state.player.defense + equippedDefenseBonus());
 }
 
 /* =====================
@@ -582,7 +664,6 @@ function doCrime(crimeId) {
     return;
   }
 
-  // Failure: can lose health and/or go to jail
   const hpLoss = randInt(c.hpLoss[0], c.hpLoss[1]);
   if (hpLoss > 0) {
     state.player.health = clamp(state.player.health - hpLoss, 0, state.player.maxHealth);
@@ -599,81 +680,11 @@ function doCrime(crimeId) {
     toast("Failed (got away)");
   }
 }
-/* =====================
-   SHOP ITEMS (Food + Healing)
-   Food restores Energy; Healing restores Health
-===================== */
-
-const SHOP_FOOD = [
-  { id:"chips",     name:"🥔 Chips",        desc:"+2 Energy",  price:60,  energy:2 },
-  { id:"burger",    name:"🍔 Burger",       desc:"+4 Energy",  price:120, energy:4 },
-  { id:"taco",      name:"🌮 Taco",         desc:"+6 Energy",  price:180, energy:6 },
-  { id:"pizza",     name:"🍕 Pizza Slice",  desc:"+8 Energy",  price:260, energy:8 },
-  { id:"feast",     name:"🍱 Street Feast", desc:"+12 Energy", price:420, energy:12 },
-];
-
-const SHOP_HEALING = [
-  { id:"bandage",   name:"🩹 Bandage",      desc:"+3 Health",  price:70,  health:3 },
-  { id:"medkit",    name:"🧰 Med Kit",      desc:"+6 Health",  price:140, health:6 },
-  { id:"stims",     name:"💉 Stims",        desc:"+9 Health",  price:220, health:9 },
-  { id:"clinic",    name:"🏥 Clinic Visit", desc:"+12 Health", price:320, health:12 },
-  { id:"surgery",   name:"🧑‍⚕️ Surgery",     desc:"+18 Health", price:520, health:18 },
-  { id:"revive",    name:"⚡ Revive Shot",  desc:"+25 Health", price:780, health:25 },
-];
-/* =====================
-   ARMS DEALER (Weapons + Armor) + Black Market
-===================== */
-
-const WEAPONS = [
-  { id:"shiv",        name:"🔪 Shiv",           price:120,  atk:1 },
-  { id:"bat",         name:"🏏 Bat",            price:220,  atk:2 },
-  { id:"knife",       name:"🗡️ Knife",         price:360,  atk:3 },
-  { id:"pistol",      name:"🔫 Pistol",         price:620,  atk:4 },
-  { id:"smg",         name:"🧨 SMG",            price:980,  atk:6 },
-  { id:"rifle",       name:"🎯 Rifle",          price:1400, atk:8 },
-];
-
-const ARMOR = [
-  { id:"hoodie",      name:"🧥 Reinforced Hoodie", price:140,  def:1 },
-  { id:"leather",     name:"🧥 Leather Jacket",    price:260,  def:2 },
-  { id:"vest",        name:"🦺 Kevlar Vest",       price:520,  def:4 },
-  { id:"plate",       name:"🛡️ Plate Carrier",     price:980,  def:6 },
-  { id:"riot",        name:"🛡️ Riot Armor",        price:1500, def:8 },
-];
-
-/* Black Market rules:
-   - refresh every 45 minutes (BLACK_MARKET_REFRESH constant already exists)
-   - 1% chance of GOLD weapon with boosted stats
-*/
 
 /* =====================
-   FIGHT HELPERS + ACTION
+   FIGHTS
 ===================== */
 
-function getSpecMods() {
-  const specId = state.player.specialization;
-  if (!specId) return {};
-  return SPECIALIZATIONS[specId]?.mods || {};
-}
-
-// Equipment hooks (later)
-function equippedAttackBonus() {
-  const w = state.equipment?.weapon;
-  return w?.atk || 0;
-}
-function equippedDefenseBonus() {
-  const a = state.equipment?.armor;
-  return a?.def || 0;
-}
-
-function playerAtk() {
-  return Math.max(0, state.player.attack + equippedAttackBonus());
-}
-function playerDef() {
-  return Math.max(0, state.player.defense + equippedDefenseBonus());
-}
-
-// Simple damage model (min 1)
 function calcDamage(attackerAtk, defenderDef) {
   const base = attackerAtk - Math.floor(defenderDef * 0.6);
   return Math.max(1, base);
@@ -719,7 +730,6 @@ function doFight(kind, id) {
   let enemyHP = target.hp;
   let playerHP = state.player.health;
 
-  // Resolve instantly in up to 6 rounds
   for (let round = 0; round < 6; round++) {
     const pDmgBase = calcDamage(playerAtk(), target.def);
     const pDmg = Math.max(1, Math.floor(pDmgBase * (1 + dmgOutMod)));
@@ -761,7 +771,6 @@ function doFight(kind, id) {
     return;
   }
 
-  // Loss: small consolation XP
   const consolationXP = Math.floor(target.xp * 0.25);
   state.player.xp += consolationXP;
 
@@ -769,33 +778,13 @@ function doFight(kind, id) {
   toast("You lost the fight");
   tryLevelUp();
 }
+
 /* =====================
-   GYM: NORMAL + JAIL GYM
-   Jail Gym is only shown when jailed
+   GYM ACTIONS
 ===================== */
 
-const GYM = {
-  normal: {
-    name: "Gym",
-    energy: 4,
-    success: 0.70,
-    xp: 18,
-    failHpLoss: [0, 2],
-    gain: { attack: 1, defense: 1 },
-  },
-  jail: {
-    name: "Jail Gym",
-    energy: 3,
-    success: 0.60,
-    xp: 14,
-    failHpLoss: [0, 2],
-    gain: { attack: 1, defense: 1 },
-  },
-};
-
-// placeholder for properties (we’ll implement later)
 function propertyTrainingBonus() {
-  return 0; // later: small +success
+  return 0; // later
 }
 
 function msToClock(ms) {
@@ -815,7 +804,6 @@ function doGym(statKey) {
   const jailed = isJailed();
   const gym = jailed ? GYM.jail : GYM.normal;
 
-  // Athlete bonus: +success and -energy (min 1)
   const specMods = getSpecMods();
   const successMod = specMods.gymSuccess || 0;
   const energyDiscount = specMods.gymEnergyDiscount || 0;
@@ -843,7 +831,6 @@ function doGym(statKey) {
     return;
   }
 
-  // Failure: lose some health, small XP
   const hpLoss = randInt(gym.failHpLoss[0], gym.failHpLoss[1]);
   if (hpLoss > 0) {
     state.player.health = clamp(state.player.health - hpLoss, 0, state.player.maxHealth);
@@ -856,10 +843,19 @@ function doGym(statKey) {
   toast("Training failed");
   tryLevelUp();
 }
-
 /* =====================
-   END PART 1
+   TITLE UPDATE
 ===================== */
+
+function updateTitle() {
+  for (let i = TITLES.length - 1; i >= 0; i--) {
+    if (state.player.reputation >= TITLES[i].points) {
+      state.player.title = TITLES[i].name;
+      break;
+    }
+  }
+}
+
 /* =====================
    NAVIGATION
 ===================== */
@@ -876,23 +872,12 @@ function showPage(id) {
   save();
 }
 
-  navButtons.forEach(btn => {
-    const route = btn.dataset.route;
-
-    if (route === "crimes" || route === "fights") {
-      btn.disabled = isJailed() || isKO();
-      return;
-    }
-
-    if (route === "gym") {
-      btn.disabled = isKO(); // gym stays available in jail
-      return;
-    }
-
-    // all other tabs always available
-    btn.disabled = false;
-  });
-
+navButtons.forEach(btn => {
+  btn.onclick = () => {
+    if (btn.disabled) return;
+    showPage(btn.dataset.route);
+  };
+});
 
 /* =====================
    SPECIALIZATION GATE
@@ -929,16 +914,29 @@ const statDef = document.getElementById("statDef");
 const statIncome = document.getElementById("statIncome");
 const statJail = document.getElementById("statJail");
 const statKO = document.getElementById("statKO");
-const pageArms = document.getElementById("page-arms");
-const profileGearBox = document.getElementById("profileGear");
 
 const activityLog = document.getElementById("activityLog");
-const pageShop = document.getElementById("page-shop");
-const profileInventoryBox = document.getElementById("profileInventory");
 
-const pageGym = document.getElementById("page-gym");
 const pageCrimes = document.getElementById("page-crimes");
 const pageFights = document.getElementById("page-fights");
+const pageGym = document.getElementById("page-gym");
+const pageShop = document.getElementById("page-shop");
+const pageArms = document.getElementById("page-arms");
+
+const profileInventoryBox = document.getElementById("profileInventory");
+const profileGearBox = document.getElementById("profileGear");
+
+/* =====================
+   PROFILE SUBVIEWS
+===================== */
+
+function openProfileView(view) {
+  document
+    .querySelectorAll("[data-profile-view]")
+    .forEach(v => (v.hidden = v.dataset.profileView !== view));
+  state.ui.profileView = view;
+  save();
+}
 
 /* =====================
    CLICK HANDLER (ACTIONS)
@@ -975,11 +973,13 @@ document.body.addEventListener("click", e => {
     save();
     render();
   }
+
   if (action === "doGym") {
     doGym(btn.dataset.stat);
     save();
     render();
   }
+
   if (action === "buyShop") {
     buyShopItem(btn.dataset.kind, btn.dataset.item);
     save();
@@ -992,13 +992,6 @@ document.body.addEventListener("click", e => {
     render();
   }
 
-  if (action === "hardReset") {
-    if (confirm("Reset all progress?")) {
-      localStorage.removeItem(SAVE_KEY);
-      location.reload();
-    }
-  }
-});
   if (action === "buyArms") {
     buyArms(btn.dataset.kind, btn.dataset.item, "arms");
     save();
@@ -1023,17 +1016,13 @@ document.body.addEventListener("click", e => {
     render();
   }
 
-/* =====================
-   PROFILE SUBVIEWS
-===================== */
-
-function openProfileView(view) {
-  document
-    .querySelectorAll("[data-profile-view]")
-    .forEach(v => (v.hidden = v.dataset.profileView !== view));
-  state.ui.profileView = view;
-  save();
-}
+  if (action === "hardReset") {
+    if (confirm("Reset all progress?")) {
+      localStorage.removeItem(SAVE_KEY);
+      location.reload();
+    }
+  }
+});
 
 /* =====================
    HUD + PROFILE RENDER
@@ -1051,6 +1040,31 @@ function renderProfile() {
   profileTitleBadge.textContent = state.player.title;
   profileSpecBadge.textContent =
     SPECIALIZATIONS[state.player.specialization]?.name || "None";
+
+  const xpNeed = state.player.level * 100;
+  xpText.textContent = `${state.player.xp} / ${xpNeed}`;
+  xpBar.style.width = `${clamp((state.player.xp / xpNeed) * 100, 0, 100)}%`;
+
+  energyText.textContent = `${state.player.energy}/${state.player.maxEnergy}`;
+  energyBar.style.width = (state.player.energy / state.player.maxEnergy) * 100 + "%";
+
+  healthText.textContent = `${state.player.health}/${state.player.maxHealth}`;
+  healthBar.style.width = (state.player.health / state.player.maxHealth) * 100 + "%";
+
+  statLevel.textContent = state.player.level;
+  statAtk.textContent = state.player.attack;
+  statDef.textContent = state.player.defense;
+  statIncome.textContent = "$0/hr";
+  statJail.textContent = isJailed() ? "Yes" : "No";
+  statKO.textContent = isKO() ? "Yes" : "No";
+
+  activityLog.innerHTML = state.ui.log.join("<br>");
+}
+
+/* =====================
+   PROFILE: INVENTORY + GEAR RENDER
+===================== */
+
 function renderProfileInventory() {
   const inv = state.inventory || {};
   const ids = Object.keys(inv);
@@ -1059,6 +1073,37 @@ function renderProfileInventory() {
     profileInventoryBox.innerHTML = `<div class="muted">Your inventory is empty.</div>`;
     return;
   }
+
+  const rows = ids
+    .map(id => inv[id])
+    .sort((a, b) => (a.type > b.type ? 1 : -1))
+    .map(it => {
+      const canUse =
+        (it.energy > 0 && state.player.energy < state.player.maxEnergy) ||
+        (it.health > 0 && state.player.health < state.player.maxHealth);
+
+      return `
+        <div class="row">
+          <div class="row__left">
+            <div class="row__title">${it.name} ×${it.quantity}</div>
+            <div class="row__sub">
+              ${it.energy ? `+${it.energy} Energy` : ""}${it.energy && it.health ? " • " : ""}${it.health ? `+${it.health} Health` : ""}
+            </div>
+          </div>
+          <div class="row__right">
+            <span class="tag">${it.type}</span>
+            <button class="btn ${canUse ? "btn--primary" : "btn--secondary"} btn--small"
+              data-action="useInv" data-item="${it.id}" ${canUse ? "" : "disabled"}>
+              Use
+            </button>
+          </div>
+        </div>
+      `;
+    }).join("");
+
+  profileInventoryBox.innerHTML = `<div class="list">${rows}</div>`;
+}
+
 function renderProfileGear() {
   const eqW = state.equipment?.weapon;
   const eqA = state.equipment?.armor;
@@ -1130,71 +1175,6 @@ function renderProfileGear() {
   `;
 }
 
-  const rows = ids
-    .map(id => inv[id])
-    .sort((a,b) => (a.type > b.type ? 1 : -1))
-    .map(it => {
-      const canUse =
-        (it.energy > 0 && state.player.energy < state.player.maxEnergy) ||
-        (it.health > 0 && state.player.health < state.player.maxHealth);
-
-      return `
-        <div class="row">
-          <div class="row__left">
-            <div class="row__title">${it.name} ×${it.quantity}</div>
-            <div class="row__sub">
-              ${it.energy ? `+${it.energy} Energy` : ""}${it.energy && it.health ? " • " : ""}${it.health ? `+${it.health} Health` : ""}
-            </div>
-          </div>
-          <div class="row__right">
-            <span class="tag">${it.type}</span>
-            <button class="btn ${canUse ? "btn--primary" : "btn--secondary"} btn--small"
-              data-action="useInv" data-item="${it.id}" ${canUse ? "" : "disabled"}>
-              Use
-            </button>
-          </div>
-        </div>
-      `;
-    }).join("");
-
-  profileInventoryBox.innerHTML = `<div class="list">${rows}</div>`;
-}
-
-  const xpNeed = state.player.level * 100;
-  xpText.textContent = `${state.player.xp} / ${xpNeed}`;
-  xpBar.style.width = `${clamp((state.player.xp / xpNeed) * 100, 0, 100)}%`;
-
-  energyText.textContent = `${state.player.energy}/${state.player.maxEnergy}`;
-  energyBar.style.width =
-    (state.player.energy / state.player.maxEnergy) * 100 + "%";
-
-  healthText.textContent = `${state.player.health}/${state.player.maxHealth}`;
-  healthBar.style.width =
-    (state.player.health / state.player.maxHealth) * 100 + "%";
-
-  statLevel.textContent = state.player.level;
-  statAtk.textContent = state.player.attack;
-  statDef.textContent = state.player.defense;
-  statIncome.textContent = "$0/hr";
-  statJail.textContent = isJailed() ? "Yes" : "No";
-  statKO.textContent = isKO() ? "Yes" : "No";
-
-  activityLog.innerHTML = state.ui.log.join("<br>");
-}
-
-/* =====================
-   TITLE UPDATE
-===================== */
-
-function updateTitle() {
-  for (let i = TITLES.length - 1; i >= 0; i--) {
-    if (state.player.reputation >= TITLES[i].points) {
-      state.player.title = TITLES[i].name;
-      break;
-    }
-  }
-}
-
 /* =====================
    CRIMES PAGE RENDER
 ===================== */
@@ -1203,16 +1183,12 @@ function renderCrimesPage() {
   const jailed = isJailed();
   const ko = isKO();
 
-  let header = `
+  const header = `
     <div class="card">
       <div class="section-title">Crimes</div>
       <div class="muted">Spend energy to commit crimes. Higher crimes are riskier.</div>
       <div class="hr"></div>
-      <div class="muted">
-        Status: ${
-          jailed ? "🚔 In Jail" : ko ? "💫 KO (heal first)" : "✅ Free"
-        }
-      </div>
+      <div class="muted">Status: ${jailed ? "🚔 In Jail" : ko ? "💫 KO (heal first)" : "✅ Free"}</div>
     </div>
   `;
 
@@ -1347,6 +1323,7 @@ function renderFightsPage() {
     </div>
   `;
 }
+
 /* =====================
    GYM PAGE RENDER
    (Shows ONLY Jail Gym when jailed)
@@ -1418,6 +1395,70 @@ function renderGymPage() {
     </div>
   `;
 }
+
+/* =====================
+   SHOP PAGE RENDER
+===================== */
+
+function renderShopPage() {
+  const foodRows = SHOP_FOOD.map(it => {
+    const disabled = state.player.money < it.price;
+    return `
+      <div class="row">
+        <div class="row__left">
+          <div class="row__title">${it.name}</div>
+          <div class="row__sub">${it.desc}</div>
+        </div>
+        <div class="row__right">
+          <span class="tag">$${it.price}</span>
+          <button class="btn ${disabled ? "btn--secondary" : "btn--primary"} btn--small"
+            data-action="buyShop" data-kind="food" data-item="${it.id}" ${disabled ? "disabled" : ""}>
+            Buy
+          </button>
+        </div>
+      </div>
+    `;
+  }).join("");
+
+  const healRows = SHOP_HEALING.map(it => {
+    const disabled = state.player.money < it.price;
+    return `
+      <div class="row">
+        <div class="row__left">
+          <div class="row__title">${it.name}</div>
+          <div class="row__sub">${it.desc}</div>
+        </div>
+        <div class="row__right">
+          <span class="tag">$${it.price}</span>
+          <button class="btn ${disabled ? "btn--secondary" : "btn--success"} btn--small"
+            data-action="buyShop" data-kind="healing" data-item="${it.id}" ${disabled ? "disabled" : ""}>
+            Buy
+          </button>
+        </div>
+      </div>
+    `;
+  }).join("");
+
+  pageShop.innerHTML = `
+    <div class="grid">
+      <div class="card">
+        <div class="section-title">Shop</div>
+        <div class="muted">Food restores Energy. Healing restores Health. Purchases go to your Inventory.</div>
+      </div>
+
+      <div class="card">
+        <div class="section-title">Food (Energy)</div>
+        <div class="list">${foodRows}</div>
+      </div>
+
+      <div class="card">
+        <div class="section-title">Healing</div>
+        <div class="list">${healRows}</div>
+      </div>
+    </div>
+  `;
+}
+
 /* =====================
    ARMS PAGE RENDER
 ===================== */
@@ -1514,75 +1555,13 @@ function renderArmsPage() {
 }
 
 /* =====================
-   SHOP PAGE RENDER
-===================== */
-
-function renderShopPage() {
-  const foodRows = SHOP_FOOD.map(it => {
-    const disabled = state.player.money < it.price;
-    return `
-      <div class="row">
-        <div class="row__left">
-          <div class="row__title">${it.name}</div>
-          <div class="row__sub">${it.desc}</div>
-        </div>
-        <div class="row__right">
-          <span class="tag">$${it.price}</span>
-          <button class="btn ${disabled ? "btn--secondary" : "btn--primary"} btn--small"
-            data-action="buyShop" data-kind="food" data-item="${it.id}" ${disabled ? "disabled" : ""}>
-            Buy
-          </button>
-        </div>
-      </div>
-    `;
-  }).join("");
-
-  const healRows = SHOP_HEALING.map(it => {
-    const disabled = state.player.money < it.price;
-    return `
-      <div class="row">
-        <div class="row__left">
-          <div class="row__title">${it.name}</div>
-          <div class="row__sub">${it.desc}</div>
-        </div>
-        <div class="row__right">
-          <span class="tag">$${it.price}</span>
-          <button class="btn ${disabled ? "btn--secondary" : "btn--success"} btn--small"
-            data-action="buyShop" data-kind="healing" data-item="${it.id}" ${disabled ? "disabled" : ""}>
-            Buy
-          </button>
-        </div>
-      </div>
-    `;
-  }).join("");
-
-  pageShop.innerHTML = `
-    <div class="grid">
-      <div class="card">
-        <div class="section-title">Shop</div>
-        <div class="muted">Food restores Energy. Healing restores Health. Purchases go to your Inventory.</div>
-      </div>
-
-      <div class="card">
-        <div class="section-title">Food (Energy)</div>
-        <div class="list">${foodRows}</div>
-      </div>
-
-      <div class="card">
-        <div class="section-title">Healing</div>
-        <div class="list">${healRows}</div>
-      </div>
-    </div>
-  `;
-}
-
-/* =====================
    MAIN RENDER LOOP
 ===================== */
 
 function render() {
   applyRegen();
   updateTitle();
+
   renderHUD();
   renderProfile();
 
@@ -1590,18 +1569,29 @@ function render() {
   renderFightsPage();
   renderGymPage();
   renderShopPage();
-
   renderArmsPage();
 
   renderProfileInventory();
   renderProfileGear();
 
-
-  // disable tabs if jailed / KO
+  // TAB LOCK RULES:
+  // - Crimes + Fights disabled if jailed OR KO
+  // - Gym disabled only if KO (Gym stays usable in jail)
+  // - Everything else enabled
   navButtons.forEach(btn => {
-    if (["crimes", "fights", "gym"].includes(btn.dataset.route)) {
+    const route = btn.dataset.route;
+
+    if (route === "crimes" || route === "fights") {
       btn.disabled = isJailed() || isKO();
+      return;
     }
+
+    if (route === "gym") {
+      btn.disabled = isKO();
+      return;
+    }
+
+    btn.disabled = false;
   });
 
   save();
@@ -1609,4 +1599,5 @@ function render() {
 
 render();
 setInterval(render, 1000);
+
 
