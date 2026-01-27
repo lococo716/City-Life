@@ -8,32 +8,74 @@
 </head>
 <body>
   <div class="app-shell">
-    <header class="topbar">
-      <div class="brand">
-        <div class="brand__dot"></div>
-        <div class="brand__text">
-          <div class="brand__title">Underworld</div>
-          <div class="brand__subtitle">Mafia Wars–style web game</div>
+   <header class="topbar">
+  <div class="brand">
+    <div class="brand__dot"></div>
+    <div class="brand__text">
+      <div class="brand__title">Underworld</div>
+      <div class="brand__subtitle">Mafia Wars–style web game</div>
+    </div>
+  </div>
+
+  <div class="hud">
+    <div class="pill" title="Money">
+      <span class="pill__label">💵</span>
+      <span id="hudMoney" class="pill__value">$0</span>
+    </div>
+
+    <div class="pill" title="Level">
+      <span class="pill__label">⭐</span>
+      <span id="hudLevel" class="pill__value">Lv 1</span>
+    </div>
+
+    <div class="pill" title="Title">
+      <span class="pill__label">🏷️</span>
+      <span id="hudTitle" class="pill__value">Street Rat</span>
+    </div>
+
+    <!-- NEW: TOP BARS -->
+    <div class="hud-meters">
+      <!-- XP -->
+      <div class="hud-meter" title="XP">
+        <div class="hud-meter__top">
+          <span class="hud-meter__label">XP</span>
+          <span class="hud-meter__text" id="hudXpText">0 / 100</span>
+        </div>
+        <div class="hud-bar">
+          <div class="hud-bar__fill" id="hudXpBar"></div>
         </div>
       </div>
 
-      <div class="hud">
-        <div class="pill" title="Money">
-          <span class="pill__label">💵</span>
-          <span id="hudMoney" class="pill__value">$0</span>
+      <!-- ENERGY + PLUS -->
+      <div class="hud-meter" title="Energy">
+        <div class="hud-meter__top">
+          <span class="hud-meter__label">Energy</span>
+          <span class="hud-meter__text" id="hudEnergyText">0/0</span>
+          <button class="hud-plus" type="button" title="Use Energy Items"
+            data-action="openQuickUse" data-kind="energy">＋</button>
         </div>
-        <div class="pill" title="Level">
-          <span class="pill__label">⭐</span>
-          <span id="hudLevel" class="pill__value">Lv 1</span>
-        </div>
-        <div class="pill" title="Title">
-          <span class="pill__label">🏷️</span>
-          <span id="hudTitle" class="pill__value">Street Rat</span>
+        <div class="hud-bar hud-bar--energy">
+          <div class="hud-bar__fill" id="hudEnergyBar"></div>
         </div>
       </div>
-    </header>
 
-    <nav class="nav" id="topNav">
+      <!-- HEALTH + PLUS -->
+      <div class="hud-meter" title="Health">
+        <div class="hud-meter__top">
+          <span class="hud-meter__label">Health</span>
+          <span class="hud-meter__text" id="hudHealthText">0/0</span>
+          <button class="hud-plus" type="button" title="Use Healing Items"
+            data-action="openQuickUse" data-kind="healing">＋</button>
+        </div>
+        <div class="hud-bar hud-bar--health">
+          <div class="hud-bar__fill" id="hudHealthBar"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</header>
+
+      <nav class="nav" id="topNav">
       <button class="nav__btn" data-route="crimes">Crimes</button>
       <button class="nav__btn" data-route="fights">Fights</button>
       <button class="nav__btn" data-route="gym">Gym</button>
@@ -186,7 +228,22 @@
     </footer>
   </div>
 
-  <div class="toast" id="toast" hidden></div>
+ <!-- QUICK USE POPUP (NEW) -->
+<div class="quickuse" id="quickUse" hidden>
+  <div class="quickuse__panel">
+    <div class="quickuse__head">
+      <div class="quickuse__title" id="quickUseTitle">Use Items</div>
+      <button class="btn btn--secondary btn--small" type="button"
+        data-action="closeQuickUse">Close</button>
+    </div>
+    <div class="quickuse__body" id="quickUseBody">
+      <!-- Filled by JS in Patch 2/3 -->
+      <div class="muted">No items.</div>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast" hidden></div>
 
 <script src="./app.js?v=fix1"></script>
 </body>
