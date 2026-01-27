@@ -266,7 +266,6 @@ const MISSION_LINES = [
 
 // Flatten steps into a lookup for actions/cooldowns.
 const MISSIONS = MISSION_LINES.flatMap(line => line.steps);
-
 /* =====================
    FIGHTS: ENEMIES + RIVALS
 ===================== */
@@ -444,6 +443,7 @@ function applyPropertyIncome() {
     if (wholeMinutes >= 5) addLog(`🏠 Property income: +$${payout} (${wholeMinutes} min)`);
   }
 }
+
 /* =====================
    DEFAULT GAME STATE
 ===================== */
@@ -526,7 +526,6 @@ function load() {
 function save(s = state) {
   localStorage.setItem(SAVE_KEY, JSON.stringify(s));
 }
-
 /* =====================
    SANITIZE SAVE
 ===================== */
@@ -716,6 +715,7 @@ function buyShopItem(kind, itemId) {
   addLog(`🛒 Bought ${item.name} for $${item.price}`);
   toast("Purchased");
 }
+
 /* =====================
    INVENTORY: RANDOM DROPS (Missions Step 3)
 ===================== */
@@ -846,7 +846,6 @@ function buyArms(kind, itemId, source = "arms") {
   addLog(`🛒 Bought ${item.name} for $${item.price}`);
   toast("Purchased");
 }
-
 /* =====================
    PROPERTIES: BUY + UPGRADE
 ===================== */
@@ -1246,6 +1245,7 @@ function updateTitle() {
     }
   }
 }
+
 /* =====================
    DOM REFERENCES
 ===================== */
@@ -1286,6 +1286,18 @@ const pageMissions = document.getElementById("page-missions");
 const profileInventoryBox = document.getElementById("profileInventory");
 const profileGearBox = document.getElementById("profileGear");
 const profilePropsBox = document.getElementById("profileProps");
+
+/* =====================
+   PATCH: MISSING HUD RENDER (fixes tabs)
+   Your render() calls renderHUD(), but it wasn't defined in your file.
+   That JS error stops execution, so nav clicks + page renders break.
+===================== */
+
+function renderHUD() {
+  if (hudMoney) hudMoney.textContent = fmtMoney(state.player.money);
+  if (hudLevel) hudLevel.textContent = `Lv ${state.player.level}`;
+  if (hudTitle) hudTitle.textContent = state.player.title;
+}
 
 /* =====================
    PAGE RENDERS
