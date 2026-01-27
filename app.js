@@ -1,14 +1,12 @@
 /* =========================================================
    Underworld – Mafia Wars–style Web Game
    app.js (Specializations DISABLED for now)
-
-   UPDATE:
-   - Action buttons now GREY OUT (disabled) when:
-     • Not enough energy
-     • Jailed (where applicable)
-     • KO'd (where applicable)
-     • Missions keep cooldown tag behavior
-
+   Properties Step 1 + 2 + 3 + 4 INCLUDED
+   Option 1 Step 1: Property Training Bonus ENABLED
+   Missions Step 1 + Step 2 + Step 3:
+     - Step 1: missions + cooldowns
+     - Step 2: mission chains (multi-step lines)
+     - Step 3: flavor text + random drops (inventory)
    Compatible with your index.html + styles.css
    ========================================================= */
 
@@ -105,8 +103,16 @@ const CRIMES = [
 ];
 
 /* =====================
-   MISSIONS (Chains + Drops)
+   MISSIONS (Step 1/2/3)
+   - Step 2: chains (mission lines)
+   - Step 3: flavor + random drops to inventory
 ===================== */
+
+/*
+  We convert missions into "lines", each with 3 steps.
+  Cooldowns are per STEP (mission id), but progress is per LINE.
+  If you fail: progress resets to step 1 for that line (simple + safe).
+*/
 
 const MISSION_LINES = [
   {
@@ -114,9 +120,48 @@ const MISSION_LINES = [
     name: "📦 The Runner",
     unlock: 1,
     steps: [
-      { id:"runner_1", name:"📦 Bag Drop",       energy:4, success:0.78, money:[180,320], xp:22, cooldownMin:10, failHpLoss:[0,3], failJailChance:0.04, failJailMin:2, failJailMax:4, flavor:"A quiet handoff. Wrong turn and you’re cooked." },
-      { id:"runner_2", name:"🚗 Tail Check",     energy:5, success:0.72, money:[260,460], xp:28, cooldownMin:12, failHpLoss:[1,4], failJailChance:0.05, failJailMin:3, failJailMax:5, flavor:"Someone’s watching. Lose them without making noise." },
-      { id:"runner_3", name:"🏁 Final Hand-Off", energy:6, success:0.66, money:[420,760], xp:38, cooldownMin:18, failHpLoss:[2,6], failJailChance:0.07, failJailMin:4, failJailMax:7, flavor:"Last stop. Get paid — and don’t get clipped." },
+      {
+        id: "runner_1",
+        name: "📦 Bag Drop",
+        energy: 4,
+        success: 0.78,
+        money: [180, 320],
+        xp: 22,
+        cooldownMin: 10,
+        failHpLoss: [0, 3],
+        failJailChance: 0.04,
+        failJailMin: 2,
+        failJailMax: 4,
+        flavor: "A quiet handoff. Wrong turn and you’re cooked.",
+      },
+      {
+        id: "runner_2",
+        name: "🚗 Tail Check",
+        energy: 5,
+        success: 0.72,
+        money: [260, 460],
+        xp: 28,
+        cooldownMin: 12,
+        failHpLoss: [1, 4],
+        failJailChance: 0.05,
+        failJailMin: 3,
+        failJailMax: 5,
+        flavor: "Someone’s watching. Lose them without making noise.",
+      },
+      {
+        id: "runner_3",
+        name: "🏁 Final Hand-Off",
+        energy: 6,
+        success: 0.66,
+        money: [420, 760],
+        xp: 38,
+        cooldownMin: 18,
+        failHpLoss: [2, 6],
+        failJailChance: 0.07,
+        failJailMin: 4,
+        failJailMax: 7,
+        flavor: "Last stop. Get paid — and don’t get clipped.",
+      },
     ],
   },
   {
@@ -124,9 +169,48 @@ const MISSION_LINES = [
     name: "💰 The Collector",
     unlock: 3,
     steps: [
-      { id:"collector_1", name:"💰 Collection Run",   energy:5, success:0.74, money:[260,480],  xp:28, cooldownMin:15, failHpLoss:[1,4], failJailChance:0.05, failJailMin:3, failJailMax:5, flavor:"They owe. You collect. Simple." },
-      { id:"collector_2", name:"📑 Ledger Cleanup",   energy:6, success:0.68, money:[380,720],  xp:36, cooldownMin:18, failHpLoss:[2,5], failJailChance:0.06, failJailMin:4, failJailMax:6, flavor:"Paper trails are deadly. Make the numbers disappear." },
-      { id:"collector_3", name:"🏦 Drop at the Bank", energy:7, success:0.62, money:[650,1150], xp:46, cooldownMin:25, failHpLoss:[3,7], failJailChance:0.09, failJailMin:5, failJailMax:9, flavor:"Big deposit. Big attention. Move like a ghost." },
+      {
+        id: "collector_1",
+        name: "💰 Collection Run",
+        energy: 5,
+        success: 0.74,
+        money: [260, 480],
+        xp: 28,
+        cooldownMin: 15,
+        failHpLoss: [1, 4],
+        failJailChance: 0.05,
+        failJailMin: 3,
+        failJailMax: 5,
+        flavor: "They owe. You collect. Simple.",
+      },
+      {
+        id: "collector_2",
+        name: "📑 Ledger Cleanup",
+        energy: 6,
+        success: 0.68,
+        money: [380, 720],
+        xp: 36,
+        cooldownMin: 18,
+        failHpLoss: [2, 5],
+        failJailChance: 0.06,
+        failJailMin: 4,
+        failJailMax: 6,
+        flavor: "Paper trails are deadly. Make the numbers disappear.",
+      },
+      {
+        id: "collector_3",
+        name: "🏦 Drop at the Bank",
+        energy: 7,
+        success: 0.62,
+        money: [650, 1150],
+        xp: 46,
+        cooldownMin: 25,
+        failHpLoss: [3, 7],
+        failJailChance: 0.09,
+        failJailMin: 5,
+        failJailMax: 9,
+        flavor: "Big deposit. Big attention. Move like a ghost.",
+      },
     ],
   },
   {
@@ -134,28 +218,54 @@ const MISSION_LINES = [
     name: "🕵️ The Insider",
     unlock: 6,
     steps: [
-      { id:"insider_1", name:"🧰 Safecrack Job",    energy:6, success:0.68, money:[420,760],  xp:36, cooldownMin:20, failHpLoss:[2,6], failJailChance:0.07, failJailMin:4, failJailMax:7, flavor:"Steel, sweat, and seconds. Don’t rush." },
-      { id:"insider_2", name:"🕵️ Inside Tip",      energy:7, success:0.62, money:[650,1150], xp:44, cooldownMin:30, failHpLoss:[3,7], failJailChance:0.09, failJailMin:5, failJailMax:9, flavor:"A friend whispers. The city listens." },
-      { id:"insider_3", name:"📡 Clean Extraction", energy:8, success:0.58, money:[900,1600], xp:56, cooldownMin:35, failHpLoss:[4,9], failJailChance:0.11, failJailMin:6, failJailMax:10, flavor:"In and out. If it gets loud, it gets ugly." },
+      {
+        id: "insider_1",
+        name: "🧰 Safecrack Job",
+        energy: 6,
+        success: 0.68,
+        money: [420, 760],
+        xp: 36,
+        cooldownMin: 20,
+        failHpLoss: [2, 6],
+        failJailChance: 0.07,
+        failJailMin: 4,
+        failJailMax: 7,
+        flavor: "Steel, sweat, and seconds. Don’t rush.",
+      },
+      {
+        id: "insider_2",
+        name: "🕵️ Inside Tip",
+        energy: 7,
+        success: 0.62,
+        money: [650, 1150],
+        xp: 44,
+        cooldownMin: 30,
+        failHpLoss: [3, 7],
+        failJailChance: 0.09,
+        failJailMin: 5,
+        failJailMax: 9,
+        flavor: "A friend whispers. The city listens.",
+      },
+      {
+        id: "insider_3",
+        name: "📡 Clean Extraction",
+        energy: 8,
+        success: 0.58,
+        money: [900, 1600],
+        xp: 56,
+        cooldownMin: 35,
+        failHpLoss: [4, 9],
+        failJailChance: 0.11,
+        failJailMin: 6,
+        failJailMax: 10,
+        flavor: "In and out. If it gets loud, it gets ugly.",
+      },
     ],
   },
 ];
 
+// Flatten steps into a lookup for actions/cooldowns.
 const MISSIONS = MISSION_LINES.flatMap(line => line.steps);
-
-const MISSION_DROPS = [
-  { id:"chips",   name:"🥔 Chips",   type:"food",    energy:2, health:0, chance:0.10 },
-  { id:"burger",  name:"🍔 Burger",  type:"food",    energy:4, health:0, chance:0.06 },
-  { id:"bandage", name:"🩹 Bandage", type:"healing", energy:0, health:3, chance:0.10 },
-  { id:"medkit",  name:"🧰 Med Kit", type:"healing", energy:0, health:6, chance:0.05 },
-];
-
-function rollMissionDrop() {
-  for (const d of MISSION_DROPS) {
-    if (Math.random() < d.chance) return d;
-  }
-  return null;
-}
 
 /* =====================
    FIGHTS: ENEMIES + RIVALS
@@ -276,8 +386,9 @@ const PROPERTIES = [
     maxLevel: 18,
   },
 ];
+
 /* =====================
-   PROPERTIES — HELPERS + INCOME ENGINE
+   PROPERTIES — HELPERS
 ===================== */
 
 function getOwnedPropertyLevel(propId) {
@@ -314,7 +425,6 @@ function applyPropertyIncome() {
   const last = state.properties.lastIncomeAt || now;
 
   const elapsed = Math.min(Math.max(0, now - last), PROPERTY_OFFLINE_CAP);
-
   const wholeMinutes = Math.floor(elapsed / MS.MIN);
   if (wholeMinutes <= 0) return;
 
@@ -331,12 +441,9 @@ function applyPropertyIncome() {
 
   if (payout > 0) {
     state.player.money += payout;
-    if (wholeMinutes >= 5) {
-      addLog(`🏠 Property income: +${fmtMoney(payout)} (${wholeMinutes} min)`);
-    }
+    if (wholeMinutes >= 5) addLog(`🏠 Property income: +$${payout} (${wholeMinutes} min)`);
   }
 }
-
 /* =====================
    DEFAULT GAME STATE
 ===================== */
@@ -348,7 +455,7 @@ function defaultState() {
     player: {
       name: "Player",
       avatar: "🙂",
-      specialization: null, // disabled
+      specialization: null, // disabled for now
       level: 1,
       xp: 0,
       money: 500,
@@ -369,7 +476,6 @@ function defaultState() {
     inventory: {},
     equipment: { weapon: null, armor: null },
     gear: { weapons: [], armor: [] },
-
     blackMarket: {
       nextRefreshAt: now + BLACK_MARKET_REFRESH,
       offerWeapon: null,
@@ -377,16 +483,16 @@ function defaultState() {
 
     properties: {
       lastIncomeAt: now,
-      owned: {}, // { propId: { level } }
+      owned: {}, // { propId: { level:number } }
     },
 
+    // MISSIONS (Step 2: chains + Step 1 cooldowns)
     missions: {
       cooldowns: {}, // { stepId: timestampMs }
-      progress: {},  // { lineId: stepIndex }
+      progress: {},  // { lineId: stepIndex } 0-based index into steps
     },
 
     rivals: { defeatedCounts: {} },
-
     ui: {
       page: "crimes",
       profileView: "overview",
@@ -458,9 +564,6 @@ function sanitize(s) {
     nextRefreshAt: Date.now() + BLACK_MARKET_REFRESH,
     offerWeapon: null,
   };
-  if (typeof s.blackMarket.nextRefreshAt !== "number") {
-    s.blackMarket.nextRefreshAt = Date.now() + BLACK_MARKET_REFRESH;
-  }
 
   // PROPERTIES safety
   s.properties = s.properties || {};
@@ -473,23 +576,28 @@ function sanitize(s) {
     if (entry.level <= 0) delete s.properties.owned[p.id];
   }
 
-  // MISSIONS safety
+  // MISSIONS safety (chains + cooldowns)
   s.missions = s.missions || {};
   s.missions.cooldowns = s.missions.cooldowns || {};
   s.missions.progress = s.missions.progress || {};
 
+  // validate cooldown timestamps by step id
   for (const step of MISSIONS) {
     const t = s.missions.cooldowns[step.id];
     if (t != null && typeof t !== "number") delete s.missions.cooldowns[step.id];
   }
+
+  // validate progress per line: integer 0..(steps-1)
   for (const line of MISSION_LINES) {
-    const v = s.missions.progress[line.lineId];
-    if (v == null) continue;
-    if (typeof v !== "number") {
+    let idx = s.missions.progress[line.lineId];
+    if (idx == null) continue;
+    if (typeof idx !== "number") {
       delete s.missions.progress[line.lineId];
       continue;
     }
-    s.missions.progress[line.lineId] = clamp(Math.floor(v), 0, line.steps.length - 1);
+    idx = Math.floor(idx);
+    idx = clamp(idx, 0, line.steps.length - 1);
+    s.missions.progress[line.lineId] = idx;
   }
 
   s.rivals = s.rivals || { defeatedCounts: {} };
@@ -572,12 +680,8 @@ function invUse(itemId) {
   const it = state.inventory[itemId];
   if (!it || it.quantity <= 0) return;
 
-  if (it.energy) {
-    state.player.energy = clamp(state.player.energy + it.energy, 0, state.player.maxEnergy);
-  }
-  if (it.health) {
-    state.player.health = clamp(state.player.health + it.health, 0, state.player.maxHealth);
-  }
+  if (it.energy) state.player.energy = clamp(state.player.energy + it.energy, 0, state.player.maxEnergy);
+  if (it.health) state.player.health = clamp(state.player.health + it.health, 0, state.player.maxHealth);
 
   it.quantity -= 1;
   if (it.quantity <= 0) delete state.inventory[itemId];
@@ -591,19 +695,13 @@ function invUse(itemId) {
 ===================== */
 
 function buyShopItem(kind, itemId) {
-  const list =
-    kind === "food" ? SHOP_FOOD :
-    kind === "healing" ? SHOP_HEALING :
-    null;
+  const list = kind === "food" ? SHOP_FOOD : kind === "healing" ? SHOP_HEALING : null;
   if (!list) return;
 
   const item = list.find(x => x.id === itemId);
   if (!item) return;
 
-  if (state.player.money < item.price) {
-    toast("Not enough money.");
-    return;
-  }
+  if (state.player.money < item.price) return toast("Not enough money.");
 
   state.player.money -= item.price;
 
@@ -615,9 +713,29 @@ function buyShopItem(kind, itemId) {
     health: item.health || 0,
   });
 
-  addLog(`🛒 Bought ${item.name} for ${fmtMoney(item.price)}`);
+  addLog(`🛒 Bought ${item.name} for $${item.price}`);
   toast("Purchased");
 }
+/* =====================
+   INVENTORY: RANDOM DROPS (Missions Step 3)
+===================== */
+
+// Safe, small drops that reuse existing inventory system.
+const MISSION_DROPS = [
+  { id: "chips",  name: "🥔 Chips",        type: "food",    energy: 2, health: 0, chance: 0.10 },
+  { id: "burger", name: "🍔 Burger",       type: "food",    energy: 4, health: 0, chance: 0.06 },
+  { id: "bandage",name: "🩹 Bandage",      type: "healing", energy: 0, health: 3, chance: 0.10 },
+  { id: "medkit", name: "🧰 Med Kit",      type: "healing", energy: 0, health: 6, chance: 0.05 },
+];
+
+function rollMissionDrop() {
+  // Roll each entry independently; at most one drop per mission run (first hit wins).
+  for (const d of MISSION_DROPS) {
+    if (Math.random() < d.chance) return d;
+  }
+  return null;
+}
+
 /* =====================
    GEAR HELPERS + BLACK MARKET
 ===================== */
@@ -676,10 +794,7 @@ function generateBlackMarketWeapon() {
 
 function refreshBlackMarketIfNeeded() {
   if (!state.blackMarket) {
-    state.blackMarket = {
-      nextRefreshAt: Date.now() + BLACK_MARKET_REFRESH,
-      offerWeapon: null,
-    };
+    state.blackMarket = { nextRefreshAt: Date.now() + BLACK_MARKET_REFRESH, offerWeapon: null };
   }
 
   const now = Date.now();
@@ -698,7 +813,7 @@ function refreshBlackMarketIfNeeded() {
 
 function buyArms(kind, itemId, source = "arms") {
   const list = kind === "weapon" ? WEAPONS : kind === "armor" ? ARMOR : null;
-  if (!list && source !== "blackmarket") return;
+  if (!list) return;
 
   let item = null;
 
@@ -706,15 +821,12 @@ function buyArms(kind, itemId, source = "arms") {
     item = state.blackMarket?.offerWeapon;
     if (!item) return;
 
-    if (state.player.money < item.price) {
-      toast("Not enough money.");
-      return;
-    }
+    if (state.player.money < item.price) return toast("Not enough money.");
 
     state.player.money -= item.price;
     ownWeapon({ id: item.id, name: item.name, atk: item.atk, rarity: item.rarity });
 
-    addLog(`🛒 Bought ${item.name} (Black Market) for ${fmtMoney(item.price)}`);
+    addLog(`🛒 Bought ${item.name} (Black Market) for $${item.price}`);
     toast("Purchased");
 
     state.blackMarket.offerWeapon = null;
@@ -724,21 +836,72 @@ function buyArms(kind, itemId, source = "arms") {
   item = list.find(x => x.id === itemId);
   if (!item) return;
 
-  if (state.player.money < item.price) {
-    toast("Not enough money.");
-    return;
-  }
+  if (state.player.money < item.price) return toast("Not enough money.");
 
   state.player.money -= item.price;
 
-  if (kind === "weapon") {
-    ownWeapon({ id: item.id, name: item.name, atk: item.atk, rarity: "normal" });
-  } else {
-    ownArmor({ id: item.id, name: item.name, def: item.def, rarity: "normal" });
-  }
+  if (kind === "weapon") ownWeapon({ id: item.id, name: item.name, atk: item.atk, rarity: "normal" });
+  else ownArmor({ id: item.id, name: item.name, def: item.def, rarity: "normal" });
 
-  addLog(`🛒 Bought ${item.name} for ${fmtMoney(item.price)}`);
+  addLog(`🛒 Bought ${item.name} for $${item.price}`);
   toast("Purchased");
+}
+
+/* =====================
+   PROPERTIES: BUY + UPGRADE
+===================== */
+
+function ensureProperties() {
+  if (!state.properties) state.properties = { lastIncomeAt: Date.now(), owned: {} };
+  if (!state.properties.owned) state.properties.owned = {};
+}
+
+function buyProperty(propId) {
+  ensureProperties();
+  const p = PROPERTIES.find(x => x.id === propId);
+  if (!p) return;
+
+  if (isPropertyOwned(propId)) return toast("Already owned.");
+  if (state.player.money < p.buyPrice) return toast("Not enough money.");
+
+  state.player.money -= p.buyPrice;
+  state.properties.owned[propId] = { level: 1 };
+
+  addLog(`🏠 Bought ${p.name} (Lv 1) for $${p.buyPrice}`);
+  toast("Property purchased");
+}
+
+function upgradeProperty(propId) {
+  ensureProperties();
+  const p = PROPERTIES.find(x => x.id === propId);
+  if (!p) return;
+
+  const lvl = getOwnedPropertyLevel(propId);
+  if (lvl <= 0) return toast("Buy it first.");
+  if (lvl >= p.maxLevel) return toast("Max level.");
+
+  const cost = getUpgradeCost(propId);
+  if (!Number.isFinite(cost)) return toast("Can't upgrade.");
+  if (state.player.money < cost) return toast("Not enough money.");
+
+  state.player.money -= cost;
+  state.properties.owned[propId].level = lvl + 1;
+
+  addLog(`⬆️ Upgraded ${p.name} to Lv ${lvl + 1} for $${cost}`);
+  toast("Upgraded");
+}
+
+/* =====================
+   PROPERTY TRAINING BONUS
+===================== */
+
+function propertyTrainingBonus() {
+  let bonus = 0;
+  for (const p of PROPERTIES) {
+    const lvl = getOwnedPropertyLevel(p.id);
+    if (lvl > 0 && p.trainingBoostPerLevel) bonus += lvl * p.trainingBoostPerLevel;
+  }
+  return clamp(bonus, 0, 0.15); // cap +15%
 }
 
 /* =====================
@@ -774,6 +937,7 @@ function tryLevelUp() {
 function equippedAttackBonus() {
   return state.equipment?.weapon?.atk || 0;
 }
+
 function equippedDefenseBonus() {
   return state.equipment?.armor?.def || 0;
 }
@@ -781,6 +945,7 @@ function equippedDefenseBonus() {
 function playerAtk() {
   return Math.max(0, state.player.attack + equippedAttackBonus());
 }
+
 function playerDef() {
   return Math.max(0, state.player.defense + equippedDefenseBonus());
 }
@@ -793,23 +958,20 @@ function doCrime(crimeId) {
   const c = CRIMES.find(x => x.id === crimeId);
   if (!c) return;
 
-  if (isJailed()) return toast("You're in jail. Wait it out.");
-  if (isKO()) return toast("You're KO'd. Heal up first.");
+  if (isJailed()) return toast("You're in jail.");
+  if (isKO()) return toast("You're KO'd.");
   if (state.player.level < c.unlock) return toast(`Unlocks at Level ${c.unlock}.`);
   if (state.player.energy < c.energy) return toast("Not enough energy.");
 
   state.player.energy -= c.energy;
 
-  const successChance = clamp(c.success, 0.05, 0.95);
-  const jailChance = clamp(c.jail, 0.0, 0.95);
-
-  if (Math.random() <= successChance) {
+  if (Math.random() <= clamp(c.success, 0.05, 0.95)) {
     const cash = randInt(c.money[0], c.money[1]);
     state.player.money += cash;
     state.player.xp += c.xp;
 
-    addLog(`✅ ${c.name}: Success. +${fmtMoney(cash)}, +${c.xp} XP`);
-    toast(`Success! +${fmtMoney(cash)}`);
+    addLog(`✅ ${c.name}: +$${cash}, +${c.xp} XP`);
+    toast(`Success! +$${cash}`);
     tryLevelUp();
     return;
   }
@@ -817,15 +979,14 @@ function doCrime(crimeId) {
   const hpLoss = randInt(c.hpLoss[0], c.hpLoss[1]);
   state.player.health = clamp(state.player.health - hpLoss, 0, state.player.maxHealth);
 
-  const gotJailed = Math.random() <= jailChance;
-  if (gotJailed) {
+  if (Math.random() <= c.jail) {
     const jailMins = randInt(c.jailMin, c.jailMax);
     state.timers.jailUntil = Date.now() + jailMins * MS.MIN;
-    addLog(`🚔 ${c.name}: Caught! -${hpLoss} HP, jailed for ${jailMins} min.`);
-    toast(`Caught! Jailed ${jailMins} min`);
+    addLog(`🚔 ${c.name}: Jailed ${jailMins} min (-${hpLoss} HP)`);
+    toast("Caught!");
   } else {
-    addLog(`❌ ${c.name}: Failed. -${hpLoss} HP (you got away).`);
-    toast("Failed (got away)");
+    addLog(`❌ ${c.name}: Failed (-${hpLoss} HP)`);
+    toast("Failed");
   }
 }
 
@@ -833,23 +994,26 @@ function doCrime(crimeId) {
    FIGHTS
 ===================== */
 
-function calcDamage(attackerAtk, defenderDef) {
-  const base = attackerAtk - Math.floor(defenderDef * 0.6);
+function calcDamage(atk, def) {
+  const base = atk - Math.floor(def * 0.6);
   return Math.max(1, base);
 }
 
 function doFight(kind, id) {
-  if (isJailed()) return toast("You're in jail. No fights right now.");
-  if (isKO()) return toast("You're KO'd. Heal up first.");
+  if (isJailed()) return toast("You're in jail.");
+  if (isKO()) return toast("You're KO'd.");
 
   let target = null;
   let isRival = false;
 
   if (kind === "enemy") target = ENEMIES.find(x => x.id === id);
-  if (kind === "rival") { target = RIVALS.find(x => x.id === id); isRival = true; }
+  if (kind === "rival") {
+    target = RIVALS.find(x => x.id === id);
+    isRival = true;
+  }
   if (!target) return;
 
-  if (state.player.level < target.unlock) return toast(`Unlocks at Level ${target.unlock}.`);
+  if (state.player.level < target.unlock) return toast(`Unlocks at Lv ${target.unlock}.`);
   if (state.player.energy < target.energy) return toast("Not enough energy.");
 
   state.player.energy -= target.energy;
@@ -857,13 +1021,11 @@ function doFight(kind, id) {
   let enemyHP = target.hp;
   let playerHP = state.player.health;
 
-  for (let round = 0; round < 6; round++) {
-    const pDmg = calcDamage(playerAtk(), target.def);
-    enemyHP -= pDmg;
+  for (let i = 0; i < 6; i++) {
+    enemyHP -= calcDamage(playerAtk(), target.def);
     if (enemyHP <= 0) break;
 
-    const eDmg = calcDamage(target.atk, playerDef());
-    playerHP -= eDmg;
+    playerHP -= calcDamage(target.atk, playerDef());
     if (playerHP <= 0) break;
   }
 
@@ -876,11 +1038,12 @@ function doFight(kind, id) {
     state.player.xp += target.xp;
 
     if (!isRival) {
-      state.player.reputation += (target.rep || 0);
+      state.player.reputation += target.rep || 0;
     } else {
       const wins = (state.rivals?.defeatedCounts?.[id] || 0) + 1;
       state.rivals.defeatedCounts[id] = wins;
 
+      // milestone rep is already in your base build; keep behavior unchanged (no new changes here)
       if (wins === 1 || wins === 3 || wins === 5) {
         const idx = wins === 1 ? 0 : wins === 3 ? 1 : 2;
         const repGain = target.repMilestone?.[idx] || 0;
@@ -889,59 +1052,186 @@ function doFight(kind, id) {
       }
     }
 
-    addLog(`🥊 Won vs ${target.name}. +${fmtMoney(cash)}, +${target.xp} XP`);
-    toast(`Win! +${fmtMoney(cash)}`);
+    addLog(`🥊 Beat ${target.name} +$${cash}`);
+    toast("Victory!");
     tryLevelUp();
   } else {
-    const consolationXP = Math.floor(target.xp * 0.25);
-    state.player.xp += consolationXP;
-    addLog(`💥 Lost vs ${target.name}. +${consolationXP} XP`);
-    toast("You lost the fight");
+    state.player.xp += Math.floor(target.xp * 0.25);
+    addLog(`💥 Lost vs ${target.name}`);
+    toast("Defeated");
     tryLevelUp();
   }
 }
 
 /* =====================
-   GYM ACTIONS
+   GYM ACTIONS (WITH PROPERTY BONUS)
 ===================== */
 
-function propertyTrainingBonus() {
-  // reserved for later; keep at 0 for now
-  return 0;
-}
-
 function doGym(statKey) {
-  if (isKO()) return toast("You're KO'd. Heal first.");
+  if (isKO()) return toast("You're KO'd.");
 
   const jailed = isJailed();
   const gym = jailed ? GYM.jail : GYM.normal;
 
-  const energyCost = gym.energy;
-  const successChance = clamp(gym.success + propertyTrainingBonus(), 0.05, 0.95);
+  if (state.player.energy < gym.energy) return toast("Not enough energy.");
+  if (!["attack", "defense"].includes(statKey)) return;
 
-  if (state.player.energy < energyCost) return toast("Not enough energy.");
-  if (statKey !== "attack" && statKey !== "defense") return;
+  state.player.energy -= gym.energy;
 
-  state.player.energy -= energyCost;
+  const bonus = propertyTrainingBonus();
+  const successChance = clamp(gym.success + bonus, 0.05, 0.95);
 
   if (Math.random() <= successChance) {
     state.player[statKey] += gym.gain[statKey];
     state.player.xp += gym.xp;
-    addLog(`🏋️ ${gym.name}: Success. +${gym.gain[statKey]} ${statKey.toUpperCase()}, +${gym.xp} XP`);
-    toast("Training success!");
+
+    addLog(`🏋️ ${gym.name}: +1 ${statKey.toUpperCase()} (+${pct(bonus)}% bonus)`);
+    toast("Training success");
     tryLevelUp();
+  } else {
+    const hpLoss = randInt(gym.failHpLoss[0], gym.failHpLoss[1]);
+    state.player.health = clamp(state.player.health - hpLoss, 0, state.player.maxHealth);
+    state.player.xp += Math.floor(gym.xp * 0.25);
+
+    addLog(`💥 ${gym.name}: Failed (-${hpLoss} HP)`);
+    toast("Training failed");
+    tryLevelUp();
+  }
+}
+
+/* =====================
+   MISSIONS — CHAINS + COOLDOWNS + DROPS
+===================== */
+
+function ensureMissions() {
+  if (!state.missions) state.missions = { cooldowns: {}, progress: {} };
+  if (!state.missions.cooldowns) state.missions.cooldowns = {};
+  if (!state.missions.progress) state.missions.progress = {};
+}
+
+function missionCooldownEndsAt(stepId) {
+  ensureMissions();
+  return state.missions.cooldowns[stepId] || 0;
+}
+
+function isMissionOnCooldown(stepId) {
+  return Date.now() < missionCooldownEndsAt(stepId);
+}
+
+function setMissionCooldown(stepId, minutes) {
+  ensureMissions();
+  state.missions.cooldowns[stepId] = Date.now() + minutes * MS.MIN;
+}
+
+function getMissionLineByStepId(stepId) {
+  for (const line of MISSION_LINES) {
+    const idx = line.steps.findIndex(s => s.id === stepId);
+    if (idx !== -1) return { line, idx };
+  }
+  return null;
+}
+
+function getCurrentStepIndex(lineId) {
+  ensureMissions();
+  const idx = state.missions.progress[lineId];
+  if (typeof idx !== "number") return 0;
+  return clamp(Math.floor(idx), 0, (MISSION_LINES.find(l => l.lineId === lineId)?.steps.length || 1) - 1);
+}
+
+function setCurrentStepIndex(lineId, idx) {
+  ensureMissions();
+  state.missions.progress[lineId] = idx;
+}
+
+function advanceMissionLine(lineId) {
+  const line = MISSION_LINES.find(l => l.lineId === lineId);
+  if (!line) return;
+
+  const idx = getCurrentStepIndex(lineId);
+  const next = Math.min(line.steps.length - 1, idx + 1);
+  setCurrentStepIndex(lineId, next);
+}
+
+function resetMissionLine(lineId) {
+  setCurrentStepIndex(lineId, 0);
+}
+
+function doMission(stepId) {
+  const step = MISSIONS.find(x => x.id === stepId);
+  if (!step) return;
+
+  if (isJailed()) return toast("You're in jail. No missions right now.");
+  if (isKO()) return toast("You're KO'd.");
+  if (state.player.level < (getMissionLineByStepId(stepId)?.line.unlock || 1)) return toast("Line locked.");
+  if (state.player.energy < step.energy) return toast("Not enough energy.");
+  if (isMissionOnCooldown(step.id)) return toast("Mission step is on cooldown.");
+
+  const link = getMissionLineByStepId(stepId);
+  if (!link) return;
+
+  // Must be the current step for that line
+  const currentIdx = getCurrentStepIndex(link.line.lineId);
+  if (currentIdx !== link.idx) {
+    toast("Finish the current step first.");
     return;
   }
 
-  const hpLoss = randInt(gym.failHpLoss[0], gym.failHpLoss[1]);
+  state.player.energy -= step.energy;
+  setMissionCooldown(step.id, step.cooldownMin);
+
+  // flavor log always
+  if (step.flavor) addLog(`🗺️ ${step.name}: ${step.flavor}`);
+
+  const successChance = clamp(step.success, 0.05, 0.95);
+
+  if (Math.random() <= successChance) {
+    const cash = randInt(step.money[0], step.money[1]);
+    state.player.money += cash;
+    state.player.xp += step.xp;
+
+    addLog(`🎯 ${step.name}: Success. +$${cash}, +${step.xp} XP`);
+    toast(`Mission success! +$${cash}`);
+    tryLevelUp();
+
+    // Step 3: random drop
+    const drop = rollMissionDrop();
+    if (drop) {
+      invAdd({ id: drop.id, name: drop.name, type: drop.type, energy: drop.energy || 0, health: drop.health || 0 });
+      addLog(`🎁 Found ${drop.name}! (added to inventory)`);
+      toast("Drop found!");
+    }
+
+    // Step 2: advance chain (or complete)
+    const line = link.line;
+    if (link.idx >= line.steps.length - 1) {
+      // completed line: reset to step 1 (repeatable)
+      resetMissionLine(line.lineId);
+      addLog(`✅ Completed mission line: ${line.name}`);
+    } else {
+      advanceMissionLine(line.lineId);
+      addLog(`➡️ Unlocked next step in: ${line.name}`);
+    }
+
+    return;
+  }
+
+  // failure
+  const hpLoss = randInt(step.failHpLoss[0], step.failHpLoss[1]);
   state.player.health = clamp(state.player.health - hpLoss, 0, state.player.maxHealth);
 
-  const consolationXP = Math.floor(gym.xp * 0.25);
-  state.player.xp += consolationXP;
+  const gotJailed = Math.random() < (step.failJailChance || 0);
+  if (gotJailed) {
+    const jailMins = randInt(step.failJailMin || 2, step.failJailMax || 4);
+    state.timers.jailUntil = Date.now() + jailMins * MS.MIN;
+    addLog(`🚔 ${step.name}: Failed. -${hpLoss} HP, jailed ${jailMins} min.`);
+    toast("Mission failed — jailed!");
+  } else {
+    addLog(`❌ ${step.name}: Failed. -${hpLoss} HP.`);
+    toast("Mission failed");
+  }
 
-  addLog(`💥 ${gym.name}: Failed. -${hpLoss} HP, +${consolationXP} XP`);
-  toast("Training failed");
-  tryLevelUp();
+  // chain reset on failure (simple + safe)
+  resetMissionLine(link.line.lineId);
 }
 
 /* =====================
@@ -998,88 +1288,244 @@ const profileGearBox = document.getElementById("profileGear");
 const profilePropsBox = document.getElementById("profileProps");
 
 /* =====================
-   NAVIGATION
+   PAGE RENDERS
 ===================== */
 
-const pages = document.querySelectorAll(".page");
-const navButtons = document.querySelectorAll(".nav__btn");
+function renderCrimesPage() {
+  const jailed = isJailed();
+  const ko = isKO();
 
-function showPage(id) {
-  pages.forEach(p => (p.hidden = p.dataset.page !== id));
-  navButtons.forEach(b =>
-    b.classList.toggle("nav__btn--active", b.dataset.route === id)
-  );
-  state.ui.page = id;
-  save();
+  pageCrimes.innerHTML = `
+    <div class="card">
+      <div class="section-title">Crimes</div>
+      <div class="muted">Spend energy to commit crimes.</div>
+      <div class="hr"></div>
+      <div class="muted">Status: ${jailed ? "🚔 In Jail" : ko ? "💫 KO" : "✅ Free"}</div>
+    </div>
+
+    <div class="card" style="margin-top:12px;">
+      <div class="list">
+        ${CRIMES.map(c => {
+          const locked = state.player.level < c.unlock;
+          const disabled = jailed || ko || locked || state.player.energy < c.energy;
+
+          return `
+            <div class="row">
+              <div class="row__left">
+                <div class="row__title">${c.name}</div>
+                <div class="row__sub">
+                  +$${c.money[0]}–$${c.money[1]} • +${c.xp} XP •
+                  Success ${pct(c.success)}% • Jail ${pct(c.jail)}%
+                </div>
+              </div>
+              <div class="row__right">
+                ${locked ? `<span class="tag">Unlock Lv ${c.unlock}</span>` : `<span class="tag">Energy ${c.energy}</span>`}
+                <button class="btn btn--small btn--primary"
+                  data-action="doCrime"
+                  data-crime="${c.id}"
+                  ${disabled ? "disabled" : ""}>
+                  Do
+                </button>
+              </div>
+            </div>
+          `;
+        }).join("")}
+      </div>
+    </div>
+  `;
 }
 
-const topNav = document.getElementById("topNav");
-topNav.addEventListener("click", e => {
-  const btn = e.target.closest(".nav__btn");
-  if (!btn || btn.disabled) return;
-  showPage(btn.dataset.route);
-  render();
-});
+function renderFightsPage() {
+  const jailed = isJailed();
+  const ko = isKO();
 
-/* =====================
-   PROFILE SUBVIEWS
-===================== */
+  pageFights.innerHTML = `
+    <div class="card">
+      <div class="section-title">Fights</div>
+      <div class="muted">Enemies and Rivals.</div>
+    </div>
 
-function openProfileView(view) {
-  document.querySelectorAll("[data-profile-view]").forEach(v => {
-    v.hidden = v.dataset.profileView !== view;
-  });
-  state.ui.profileView = view;
-  save();
+    <div class="card" style="margin-top:12px;">
+      <div class="section-title" style="margin-top:0;">Enemies</div>
+      <div class="list">
+        ${ENEMIES.map(e => {
+          const locked = state.player.level < e.unlock;
+          const disabled = jailed || ko || locked || state.player.energy < e.energy;
+          return `
+            <div class="row">
+              <div class="row__left">
+                <div class="row__title">${e.name}</div>
+                <div class="row__sub">+$${e.money[0]}–$${e.money[1]} • +${e.xp} XP</div>
+              </div>
+              <div class="row__right">
+                ${locked ? `<span class="tag">Unlock Lv ${e.unlock}</span>` : `<span class="tag">Energy ${e.energy}</span>`}
+                <button class="btn btn--small btn--primary"
+                  data-action="doFight"
+                  data-kind="enemy"
+                  data-fight="${e.id}"
+                  ${disabled ? "disabled" : ""}>
+                  Fight
+                </button>
+              </div>
+            </div>
+          `;
+        }).join("")}
+      </div>
+    </div>
+  `;
+}
+
+function renderGymPage() {
+  const jailed = isJailed();
+  const ko = isKO();
+  const gym = jailed ? GYM.jail : GYM.normal;
+  const bonus = propertyTrainingBonus();
+
+  pageGym.innerHTML = `
+    <div class="card">
+      <div class="section-title">${gym.name}</div>
+      <div class="muted">
+        Cost: ${gym.energy} Energy • Success ${pct(gym.success + bonus)}%
+      </div>
+    </div>
+
+    <div class="card" style="margin-top:12px;">
+      <div class="grid grid--2">
+        <button class="btn btn--primary"
+          data-action="doGym"
+          data-stat="attack"
+          ${ko || state.player.energy < gym.energy ? "disabled" : ""}>
+          Train Attack
+        </button>
+        <button class="btn btn--success"
+          data-action="doGym"
+          data-stat="defense"
+          ${ko || state.player.energy < gym.energy ? "disabled" : ""}>
+          Train Defense
+        </button>
+      </div>
+    </div>
+  `;
+}
+
+function renderShopPage() {
+  pageShop.innerHTML = `
+    <div class="card">
+      <div class="section-title">Shop</div>
+    </div>
+
+    <div class="card" style="margin-top:12px;">
+      <div class="section-title" style="margin-top:0;">Food</div>
+      <div class="list">
+        ${SHOP_FOOD.map(it => `
+          <div class="row">
+            <div class="row__left">
+              <div class="row__title">${it.name}</div>
+              <div class="row__sub">${it.desc}</div>
+            </div>
+            <div class="row__right">
+              <span class="tag">${fmtMoney(it.price)}</span>
+              <button class="btn btn--small btn--primary"
+                data-action="buyShop"
+                data-kind="food"
+                data-item="${it.id}"
+                ${state.player.money < it.price ? "disabled" : ""}>
+                Buy
+              </button>
+            </div>
+          </div>
+        `).join("")}
+      </div>
+    </div>
+  `;
+}
+
+function renderArmsPage() {
+  refreshBlackMarketIfNeeded();
+
+  pageArms.innerHTML = `
+    <div class="card">
+      <div class="section-title">Arms Dealer</div>
+    </div>
+  `;
+}
+
+function renderPropertiesPage() {
+  pageProperties.innerHTML = `
+    <div class="card">
+      <div class="section-title">Properties</div>
+      <div class="muted">Passive income: ${fmtMoney(getTotalIncomePerHour())}/hr</div>
+    </div>
+  `;
 }
 
 /* =====================
-   CLICK HANDLER
+   MISSIONS PAGE (Chains + Drops)
 ===================== */
 
-document.body.addEventListener("click", e => {
-  const btn = e.target.closest("[data-action]");
-  if (!btn || btn.disabled) return;
+function renderMissionsPage() {
+  const jailed = isJailed();
+  const ko = isKO();
 
-  const a = btn.dataset.action;
+  pageMissions.innerHTML = `
+    <div class="card">
+      <div class="section-title">Missions</div>
+      <div class="muted">
+        Mission lines progress step-by-step.
+        ${jailed ? "<br><b>🚔 No missions while jailed.</b>" : ""}
+      </div>
+    </div>
 
-  if (a === "openProfileView") openProfileView(btn.dataset.view);
-  if (a === "doCrime") doCrime(btn.dataset.crime);
-  if (a === "doFight") doFight(btn.dataset.kind, btn.dataset.fight);
-  if (a === "doGym") doGym(btn.dataset.stat);
-  if (a === "doMission") doMission(btn.dataset.mission);
+    ${MISSION_LINES.map(line => {
+      const currentIdx = getCurrentStepIndex(line.lineId);
+      const step = line.steps[currentIdx];
+      const onCd = isMissionOnCooldown(step.id);
+      const cdLeft = Math.max(0, missionCooldownEndsAt(step.id) - Date.now());
+      const disabled =
+        jailed || ko || state.player.level < line.unlock ||
+        onCd || state.player.energy < step.energy;
 
-  if (a === "buyShop") buyShopItem(btn.dataset.kind, btn.dataset.item);
-  if (a === "useInv") invUse(btn.dataset.item);
-  if (a === "buyArms") buyArms(btn.dataset.kind, btn.dataset.item);
-  if (a === "buyBM") buyArms("weapon", null, "blackmarket");
-  if (a === "equipWeapon") equipWeaponByIndex(+btn.dataset.idx);
-  if (a === "equipArmor") equipArmorByIndex(+btn.dataset.idx);
+      return `
+        <div class="card" style="margin-top:12px;">
+          <div class="section-title">${line.name}</div>
+          <div class="muted">Step ${currentIdx + 1} of ${line.steps.length}</div>
+          <div class="hr"></div>
 
-  if (a === "hardReset" && confirm("Reset all progress?")) {
-    localStorage.removeItem(SAVE_KEY);
-    location.reload();
-  }
-
-  save();
-  render();
-});
+          <div class="row">
+            <div class="row__left">
+              <div class="row__title">${step.name}</div>
+              <div class="row__sub">
+                ${step.flavor}<br>
+                +$${step.money[0]}–$${step.money[1]} • +${step.xp} XP
+              </div>
+            </div>
+            <div class="row__right">
+              <span class="tag">Energy ${step.energy}</span>
+              <span class="tag">${step.cooldownMin}m CD</span>
+              ${onCd ? `<span class="tag">⏳ ${msToClock(cdLeft)}</span>` : ``}
+              <button class="btn btn--small btn--primary"
+                data-action="doMission"
+                data-mission="${step.id}"
+                ${disabled ? "disabled" : ""}>
+                Run
+              </button>
+            </div>
+          </div>
+        </div>
+      `;
+    }).join("")}
+  `;
+}
 
 /* =====================
-   RENDER HUD + PROFILE
+   PROFILE RENDER
 ===================== */
-
-function renderHUD() {
-  hudMoney.textContent = fmtMoney(state.player.money);
-  hudLevel.textContent = `Lv ${state.player.level}`;
-  hudTitle.textContent = state.player.title;
-}
 
 function renderProfile() {
   profileAvatar.textContent = state.player.avatar;
   profileName.textContent = state.player.name;
   profileTitleBadge.textContent = state.player.title;
-  profileSpecBadge.textContent = "No Specialization";
+  if (profileSpecBadge) profileSpecBadge.textContent = "No Specialization";
 
   const xpNeed = xpNeededForLevel(state.player.level);
   xpText.textContent = `${state.player.xp} / ${xpNeed}`;
@@ -1099,174 +1545,64 @@ function renderProfile() {
   statKO.textContent = isKO() ? "Yes" : "No";
 
   activityLog.innerHTML = state.ui.log.join("<br>");
-  openProfileView(state.ui.profileView);
 }
 
 /* =====================
-   PAGE RENDERS
+   NAVIGATION
 ===================== */
 
-function renderCrimesPage() {
-  pageCrimes.innerHTML = `
-    <div class="section-title">Crimes</div>
-    <div class="list">
-      ${CRIMES.map(c => `
-        <div class="row">
-          <div class="row__left">
-            <div class="row__title">${c.name}</div>
-            <div class="row__sub">Energy ${c.energy} • Lv ${c.unlock}</div>
-          </div>
-          <div class="row__right">
-            <button class="btn btn--small btn--primary"
-              data-action="doCrime"
-              data-crime="${c.id}"
-              ${state.player.energy < c.energy || isJailed() || isKO() ? "disabled" : ""}>
-              Do
-            </button>
-          </div>
-        </div>
-      `).join("")}
-    </div>
-  `;
+const pages = document.querySelectorAll(".page");
+const navButtons = document.querySelectorAll(".nav__btn");
+
+function showPage(id) {
+  pages.forEach(p => (p.hidden = p.dataset.page !== id));
+  navButtons.forEach(b =>
+    b.classList.toggle("nav__btn--active", b.dataset.route === id)
+  );
+  state.ui.page = id;
 }
 
-function renderFightsPage() {
-  pageFights.innerHTML = `
-    <div class="section-title">Fights</div>
-    <div class="list">
-      ${ENEMIES.map(e => `
-        <div class="row">
-          <div class="row__left">
-            <div class="row__title">${e.name}</div>
-            <div class="row__sub">Energy ${e.energy} • Lv ${e.unlock}</div>
-          </div>
-          <div class="row__right">
-            <button class="btn btn--small btn--primary"
-              data-action="doFight"
-              data-kind="enemy"
-              data-fight="${e.id}"
-              ${state.player.energy < e.energy || isJailed() || isKO() ? "disabled" : ""}>
-              Fight
-            </button>
-          </div>
-        </div>
-      `).join("")}
-    </div>
-  `;
-}
+document.getElementById("topNav").addEventListener("click", e => {
+  const btn = e.target.closest(".nav__btn");
+  if (!btn || btn.disabled) return;
+  showPage(btn.dataset.route);
+  render();
+});
 
-function renderGymPage() {
-  const cost = isJailed() ? GYM.jail.energy : GYM.normal.energy;
-  pageGym.innerHTML = `
-    <div class="section-title">${isJailed() ? "Jail Gym" : "Gym"}</div>
-    <div class="grid grid--2">
-      <button class="btn btn--primary"
-        data-action="doGym"
-        data-stat="attack"
-        ${state.player.energy < cost || isKO() ? "disabled" : ""}>
-        Train Attack
-      </button>
-      <button class="btn btn--primary"
-        data-action="doGym"
-        data-stat="defense"
-        ${state.player.energy < cost || isKO() ? "disabled" : ""}>
-        Train Defense
-      </button>
-    </div>
-  `;
-}
+/* =====================
+   CLICK HANDLER
+===================== */
 
-function renderShopPage() {
-  pageShop.innerHTML = `
-    <div class="section-title">Shop</div>
-    <div class="list">
-      ${SHOP_FOOD.map(it => `
-        <div class="row">
-          <div class="row__left">
-            <div class="row__title">${it.name}</div>
-            <div class="row__sub">${it.desc}</div>
-          </div>
-          <div class="row__right">
-            <button class="btn btn--small btn--primary"
-              data-action="buyShop"
-              data-kind="food"
-              data-item="${it.id}">
-              ${fmtMoney(it.price)}
-            </button>
-          </div>
-        </div>
-      `).join("")}
-    </div>
-  `;
-}
+document.body.addEventListener("click", e => {
+  const btn = e.target.closest("[data-action]");
+  if (!btn) return;
 
-function renderArmsPage() {
-  pageArms.innerHTML = `
-    <div class="section-title">Arms Dealer</div>
-    <div class="list">
-      ${WEAPONS.map(w => `
-        <div class="row">
-          <div class="row__left">
-            <div class="row__title">${w.name}</div>
-            <div class="row__sub">+${w.atk} ATK</div>
-          </div>
-          <div class="row__right">
-            <button class="btn btn--small btn--primary"
-              data-action="buyArms"
-              data-kind="weapon"
-              data-item="${w.id}">
-              ${fmtMoney(w.price)}
-            </button>
-          </div>
-        </div>
-      `).join("")}
-    </div>
-  `;
-}
+  const a = btn.dataset.action;
 
-function renderPropertiesPage() {
-  pageProperties.innerHTML = `
-    <div class="card">
-      <div class="section-title">Properties</div>
-      <div class="muted">
-        Passive income active. Buying & upgrading coming next.
-      </div>
-    </div>
-  `;
-}
+  if (a === "doCrime") doCrime(btn.dataset.crime);
+  if (a === "doFight") doFight(btn.dataset.kind, btn.dataset.fight);
+  if (a === "doGym") doGym(btn.dataset.stat);
+  if (a === "doMission") doMission(btn.dataset.mission);
 
-function renderProfileInventory() {
-  if (!profileInventoryBox) return;
-  const inv = Object.values(state.inventory);
+  if (a === "buyShop") buyShopItem(btn.dataset.kind, btn.dataset.item);
+  if (a === "useInv") invUse(btn.dataset.item);
 
-  if (!inv.length) {
-    profileInventoryBox.innerHTML = `<div class="muted">Inventory empty.</div>`;
-    return;
+  if (a === "buyArms") buyArms(btn.dataset.kind, btn.dataset.item);
+  if (a === "buyBM") buyArms("weapon", null, "blackmarket");
+  if (a === "equipWeapon") equipWeaponByIndex(+btn.dataset.idx);
+  if (a === "equipArmor") equipArmorByIndex(+btn.dataset.idx);
+
+  if (a === "buyProperty") buyProperty(btn.dataset.prop);
+  if (a === "upgradeProperty") upgradeProperty(btn.dataset.prop);
+
+  if (a === "hardReset" && confirm("Reset all progress?")) {
+    localStorage.removeItem(SAVE_KEY);
+    location.reload();
   }
 
-  profileInventoryBox.innerHTML = `
-    <div class="list">
-      ${inv.map(it => `
-        <div class="row">
-          <div class="row__left">
-            <div class="row__title">${it.name} ×${it.quantity}</div>
-          </div>
-          <div class="row__right">
-            <button class="btn btn--small btn--primary"
-              data-action="useInv"
-              data-item="${it.id}">
-              Use
-            </button>
-          </div>
-        </div>
-      `).join("")}
-    </div>
-  `;
-}
-
-function renderProfileGear() {
-  profileGearBox.innerHTML = `<div class="muted">Gear management coming soon.</div>`;
-}
+  save();
+  render();
+});
 
 /* =====================
    MAIN RENDER LOOP
@@ -1286,17 +1622,17 @@ function render() {
   renderShopPage();
   renderArmsPage();
   renderPropertiesPage();
-
-  renderProfileInventory();
-  renderProfileGear();
+  renderMissionsPage();
 
   navButtons.forEach(btn => {
-    if (btn.dataset.route === "profile") {
-      btn.disabled = false;
-    } else if (btn.dataset.route === "gym") {
+    if (isJailed()) {
+      btn.disabled = btn.dataset.route !== "profile";
+      return;
+    }
+    if (["crimes","fights","missions","gym"].includes(btn.dataset.route)) {
       btn.disabled = isKO();
     } else {
-      btn.disabled = isJailed() || isKO();
+      btn.disabled = false;
     }
   });
 
