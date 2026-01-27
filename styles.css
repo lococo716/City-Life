@@ -576,3 +576,47 @@ body{
 .quickuse[hidden] {
   display: none !important;
 }
+/* =========================
+   PATCH 4: TOP HUD METERS
+   - Smooth bar animations
+   - Better looking gold plus
+========================= */
+
+.hud-bar__fill{
+  width: 0%;
+  height: 100%;
+  transition: width 260ms ease;
+  will-change: width;
+}
+
+/* Make the + buttons look better (gold) */
+.hud-plus{
+  margin-left: 8px;
+  width: 22px;
+  height: 22px;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 215, 0, 0.55);
+  background: linear-gradient(180deg, rgba(255,215,0,0.22), rgba(255,215,0,0.08));
+  color: #FFD700;
+  font-weight: 900;
+  line-height: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transform: translateY(-1px);
+}
+
+.hud-plus:hover{
+  border-color: rgba(255, 215, 0, 0.75);
+  background: linear-gradient(180deg, rgba(255,215,0,0.30), rgba(255,215,0,0.12));
+}
+
+.hud-plus:active{
+  transform: translateY(0px) scale(0.98);
+}
+
+.hud-plus:disabled{
+  opacity: 0.45;
+  cursor: not-allowed;
+}
