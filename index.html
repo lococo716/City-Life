@@ -242,6 +242,30 @@
     </div>
   </div>
 </div>
+<!-- AUTH OVERLAY (LOGIN / CREATE ACCOUNT) -->
+<div class="auth" id="auth" hidden>
+  <div class="auth__panel card">
+    <div class="section-title" style="margin-top:0;">Login</div>
+    <div class="muted" id="authMsg" style="margin-bottom:10px;"></div>
+
+    <div class="grid" style="gap:10px;">
+      <label class="muted" style="font-size:12px;">Username</label>
+      <input id="authUser" autocomplete="username" />
+
+      <label class="muted" style="font-size:12px;">Password</label>
+      <input id="authPass" type="password" autocomplete="current-password" />
+
+      <div class="grid grid--2" style="gap:10px; margin-top:8px;">
+        <button class="btn btn--primary" data-action="login">Log In</button>
+        <button class="btn btn--secondary" data-action="createAccount">Create</button>
+      </div>
+
+      <div class="hr"></div>
+
+      <button class="btn btn--danger" data-action="logout">Log Out</button>
+    </div>
+  </div>
+</div>
 
 <div class="toast" id="toast" hidden></div>
 
