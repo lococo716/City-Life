@@ -24,8 +24,34 @@
    CONSTANTS & CONFIG
 ===================== */
 
-const SAVE_KEY = "underworld_save_v1";
+const SAVE_KEY_BASE = "underworld_save_v1";
+const ACCOUNTS_KEY = "underworld_accounts_v1";
+const SESSION_KEY = "underworld_session_v1";
 const SCHEMA_VERSION = 1;
+
+let currentUser = null;
+
+function getSaveKey() {
+  // Each user gets a separate save slot
+  return `${SAVE_KEY_BASE}::${currentUser || "guest"}`;
+}
+
+// local-only hash (NOT secure like a server)
+async function sha256Hex(str) {
+  const enc = new TextEncoder().encode(str);
+  const buf = await crypto.subtle.digest("SHA-256", enc);
+  return [...new Uint8Array(buf)].map(b => b.toString(16).padStart(2, "0")).join("");
+}
+
+function loadAccounts() {
+  try { return JSON.parse(localStorage.getItem(ACCOUNTS_KEY) || "{}"); }
+  catch { return {}; }
+}
+
+function saveAccounts(obj) {
+  localStorage.setItem(ACCOUNTS_KEY, JSON.stringify(obj));
+}
+
 
 const MS = {
   MIN: 60 * 1000,
@@ -317,14 +343,26 @@ function defaultState() {
 let state = load();
 
 function load() {
-  const raw = localStorage.getItem(SAVE_KEY);
+  // Must have a user to load a user-save
+  const key = getSaveKey();
+
+  // If user has no save yet, try migrating old single-save once
+  const oldRaw = localStorage.getItem("underworld_save_v1"); // your old key name
+  const raw = localStorage.getItem(key);
+
   if (!raw) {
-    const fresh = defaultState();
-    save(fresh);
-    return fresh;
+    if (oldRaw) {
+      // migrate old save into this user slot (only if user slot is empty)
+      localStorage.setItem(key, oldRaw);
+    } else {
+      const fresh = defaultState();
+      save(fresh);
+      return fresh;
+    }
   }
+
   try {
-    return sanitize(JSON.parse(raw));
+    return sanitize(JSON.parse(localStorage.getItem(key)));
   } catch {
     const fresh = defaultState();
     save(fresh);
@@ -333,7 +371,8 @@ function load() {
 }
 
 function save(s = state) {
-  localStorage.setItem(SAVE_KEY, JSON.stringify(s));
+  const key = getSaveKey();
+  localStorage.setItem(key, JSON.stringify(s));
 }
 
 /* =====================
@@ -1307,6 +1346,23 @@ const hudHealthBar = document.getElementById("hudHealthBar");
 const quickUse = document.getElementById("quickUse");
 const quickUseTitle = document.getElementById("quickUseTitle");
 const quickUseBody = document.getElementById("quickUseBody");
+// AUTH DOM
+const auth = document.getElementById("auth");
+const authMsg = document.getElementById("authMsg");
+const authUser = document.getElementById("authUser");
+const authPass = document.getElementById("authPass");
+
+function openAuth(msg) {
+  if (!auth) return;
+  if (authMsg) authMsg.textContent = msg || "";
+  auth.hidden = false;
+}
+
+function closeAuth() {
+  if (!auth) return;
+  auth.hidden = true;
+  if (authPass) authPass.value = "";
+}
 
 /* =====================
    HUD RENDER (RESTORE)
@@ -2074,6 +2130,58 @@ document.getElementById("topNav").addEventListener("click", e => {
   render();
 });
 
+async function createAccount() {
+  const u = (authUser?.value || "").trim();
+  const p = (authPass?.value || "").trim();
+
+  if (!u || u.length < 3) return openAuth("Username must be at least 3 characters.");
+  if (!p || p.length < 4) return openAuth("Password must be at least 4 characters.");
+
+  const accounts = loadAccounts();
+  if (accounts[u]) return openAuth("That username already exists.");
+
+  const passHash = await sha256Hex(p);
+  accounts[u] = { passHash, createdAt: Date.now() };
+  saveAccounts(accounts);
+
+  localStorage.setItem(SESSION_KEY, JSON.stringify({ user: u }));
+  currentUser = u;
+
+  // load or create their save
+  state = load();
+  addLog(`👤 Logged in as ${u}`);
+  closeAuth();
+  render();
+}
+
+async function login() {
+  const u = (authUser?.value || "").trim();
+  const p = (authPass?.value || "").trim();
+  if (!u || !p) return openAuth("Enter username + password.");
+
+  const accounts = loadAccounts();
+  const rec = accounts[u];
+  if (!rec) return openAuth("Account not found.");
+
+  const passHash = await sha256Hex(p);
+  if (passHash !== rec.passHash) return openAuth("Wrong password.");
+
+  localStorage.setItem(SESSION_KEY, JSON.stringify({ user: u }));
+  currentUser = u;
+
+  state = load();
+  addLog(`👤 Logged in as ${u}`);
+  closeAuth();
+  render();
+}
+
+function logout() {
+  localStorage.removeItem(SESSION_KEY);
+  currentUser = null;
+  // keep state in memory but require auth again
+  openAuth("Logged out. Log in to continue.");
+}
+
 /* =====================
    CLICK HANDLER (FIX: PROFILE SUB-TABS + BM BUY)
 ===================== */
@@ -2084,6 +2192,10 @@ document.body.addEventListener("click", e => {
 
   const a = btn.dataset.action;
   // QUICK USE (TOP HUD)
+    // AUTH
+  if (a === "login") { login(); return; }
+  if (a === "createAccount") { createAccount(); return; }
+  if (a === "logout") { logout(); return; }
   if (a === "openQuickUse") openQuickUse(btn.dataset.kind);
   if (a === "closeQuickUse") closeQuickUse();
   if (a === "quickUseItem") quickUseItem(btn.dataset.item);
@@ -2162,9 +2274,25 @@ function render() {
 /* =====================
    BOOT
 ===================== */
+// AUTH boot
+(function bootAuth() {
+  try {
+    const sess = JSON.parse(localStorage.getItem(SESSION_KEY) || "null");
+    currentUser = sess?.user || null;
+  } catch {
+    currentUser = null;
+  }
 
-render();
-setInterval(render, 1000);
+  if (!currentUser) {
+    openAuth("Log in or create an account to play.");
+    return;
+  }
+
+  state = load();
+  render();
+  setInterval(render, 1000);
+})();
+
 
 /* =====================
    (PART 4 END)
