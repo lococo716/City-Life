@@ -1,9 +1,24 @@
 /* =========================================================
    Underworld – Mafia Wars–style Web Game
    app.js (Specializations DISABLED for now)
-   Properties Step 1 + 2 + 3 + 4 INCLUDED
-   Option 1 Step 1: Property Training Bonus ENABLED
-   Missions Step 1: Basic missions + cooldowns (no missions in jail)
+
+   Includes:
+   - Crimes (15)
+   - Fights (Enemies + Rivals milestones)  ✅ Rivals visible in UI
+   - Gym (normal + jail gym)
+   - Shop (food + healing → inventory)
+   - Arms Dealer (weapons + armor) + Black Market refresh ✅ Armor visible in UI
+   - Properties (buy + upgrade) + passive income (4h offline cap)
+   - Missions:
+       Step 1: basic missions + cooldown
+       Step 2: mission chains (lines with 3 steps)
+       Step 3: flavor + random drops (adds items to inventory)
+
+   IMPORTANT:
+   - When in jail: ONLY Profile tab works (as requested)
+   - When KO: disable crimes/fights/gym/missions, but KEEP shop/arms/properties/profile usable ✅ fixed
+   - No login, GitHub Pages friendly, saves in localStorage
+
    Compatible with your index.html + styles.css
    ========================================================= */
 
@@ -100,73 +115,57 @@ const CRIMES = [
 ];
 
 /* =====================
-   MISSIONS (Step 1)
-   - own cooldowns
-   - not allowed while jailed
+   MISSIONS (Chains + Drops)
 ===================== */
 
-const MISSIONS = [
+const MISSION_LINES = [
   {
-    id: "bag_drop",
-    name: "📦 Bag Drop",
+    lineId: "line_runner",
+    name: "📦 The Runner",
     unlock: 1,
-    energy: 4,
-    success: 0.78,
-    money: [180, 320],
-    xp: 22,
-    cooldownMin: 10,
-    failHpLoss: [0, 3],
-    failJailChance: 0.04,
-    failJailMin: 2,
-    failJailMax: 4,
-    desc: "Move a package across town without drawing heat.",
+    steps: [
+      { id:"runner_1", name:"📦 Bag Drop",       energy:4, success:0.78, money:[180,320], xp:22, cooldownMin:10, failHpLoss:[0,3], failJailChance:0.04, failJailMin:2, failJailMax:4, flavor:"A quiet handoff. Wrong turn and you’re cooked." },
+      { id:"runner_2", name:"🚗 Tail Check",     energy:5, success:0.72, money:[260,460], xp:28, cooldownMin:12, failHpLoss:[1,4], failJailChance:0.05, failJailMin:3, failJailMax:5, flavor:"Someone’s watching. Lose them without making noise." },
+      { id:"runner_3", name:"🏁 Final Hand-Off", energy:6, success:0.66, money:[420,760], xp:38, cooldownMin:18, failHpLoss:[2,6], failJailChance:0.07, failJailMin:4, failJailMax:7, flavor:"Last stop. Get paid — and don’t get clipped." },
+    ],
   },
   {
-    id: "collection_run",
-    name: "💰 Collection Run",
+    lineId: "line_collector",
+    name: "💰 The Collector",
     unlock: 3,
-    energy: 5,
-    success: 0.74,
-    money: [260, 480],
-    xp: 28,
-    cooldownMin: 15,
-    failHpLoss: [1, 4],
-    failJailChance: 0.05,
-    failJailMin: 3,
-    failJailMax: 5,
-    desc: "Collect what’s owed. Keep it clean… or else.",
+    steps: [
+      { id:"collector_1", name:"💰 Collection Run",   energy:5, success:0.74, money:[260,480],  xp:28, cooldownMin:15, failHpLoss:[1,4], failJailChance:0.05, failJailMin:3, failJailMax:5, flavor:"They owe. You collect. Simple." },
+      { id:"collector_2", name:"📑 Ledger Cleanup",   energy:6, success:0.68, money:[380,720],  xp:36, cooldownMin:18, failHpLoss:[2,5], failJailChance:0.06, failJailMin:4, failJailMax:6, flavor:"Paper trails are deadly. Make the numbers disappear." },
+      { id:"collector_3", name:"🏦 Drop at the Bank", energy:7, success:0.62, money:[650,1150], xp:46, cooldownMin:25, failHpLoss:[3,7], failJailChance:0.09, failJailMin:5, failJailMax:9, flavor:"Big deposit. Big attention. Move like a ghost." },
+    ],
   },
   {
-    id: "safecrack",
-    name: "🧰 Safecrack Job",
+    lineId: "line_insider",
+    name: "🕵️ The Insider",
     unlock: 6,
-    energy: 6,
-    success: 0.68,
-    money: [420, 760],
-    xp: 36,
-    cooldownMin: 20,
-    failHpLoss: [2, 6],
-    failJailChance: 0.07,
-    failJailMin: 4,
-    failJailMax: 7,
-    desc: "Crack a lockup safe before the owner returns.",
-  },
-  {
-    id: "inside_tip",
-    name: "🕵️ Inside Tip",
-    unlock: 10,
-    energy: 7,
-    success: 0.62,
-    money: [650, 1150],
-    xp: 44,
-    cooldownMin: 30,
-    failHpLoss: [3, 7],
-    failJailChance: 0.09,
-    failJailMin: 5,
-    failJailMax: 9,
-    desc: "Work a contact for info, then act fast.",
+    steps: [
+      { id:"insider_1", name:"🧰 Safecrack Job",    energy:6, success:0.68, money:[420,760],  xp:36, cooldownMin:20, failHpLoss:[2,6], failJailChance:0.07, failJailMin:4, failJailMax:7, flavor:"Steel, sweat, and seconds. Don’t rush." },
+      { id:"insider_2", name:"🕵️ Inside Tip",      energy:7, success:0.62, money:[650,1150], xp:44, cooldownMin:30, failHpLoss:[3,7], failJailChance:0.09, failJailMin:5, failJailMax:9, flavor:"A friend whispers. The city listens." },
+      { id:"insider_3", name:"📡 Clean Extraction", energy:8, success:0.58, money:[900,1600], xp:56, cooldownMin:35, failHpLoss:[4,9], failJailChance:0.11, failJailMin:6, failJailMax:10, flavor:"In and out. If it gets loud, it gets ugly." },
+    ],
   },
 ];
+
+const MISSIONS = MISSION_LINES.flatMap(line => line.steps);
+
+const MISSION_DROPS = [
+  { id:"chips",   name:"🥔 Chips",    type:"food",    energy:2, health:0, chance:0.10 },
+  { id:"burger",  name:"🍔 Burger",   type:"food",    energy:4, health:0, chance:0.06 },
+  { id:"bandage", name:"🩹 Bandage",  type:"healing", energy:0, health:3, chance:0.10 },
+  { id:"medkit",  name:"🧰 Med Kit",  type:"healing", energy:0, health:6, chance:0.05 },
+];
+
+function rollMissionDrop() {
+  for (const d of MISSION_DROPS) {
+    if (Math.random() < d.chance) return d;
+  }
+  return null;
+}
 
 /* =====================
    FIGHTS: ENEMIES + RIVALS
@@ -240,7 +239,6 @@ const ARMOR = [
   { id:"plate",   name:"🛡️ Plate Carrier",     price:980,  def:6 },
   { id:"riot",    name:"🛡️ Riot Armor",        price:1500, def:8 },
 ];
-
 /* =====================
    PROPERTIES
 ===================== */
@@ -345,6 +343,7 @@ function applyPropertyIncome() {
     if (wholeMinutes >= 5) addLog(`🏠 Property income: +$${payout} (${wholeMinutes} min)`);
   }
 }
+
 /* =====================
    DEFAULT GAME STATE
 ===================== */
@@ -377,6 +376,7 @@ function defaultState() {
     inventory: {},
     equipment: { weapon: null, armor: null },
     gear: { weapons: [], armor: [] },
+
     blackMarket: {
       nextRefreshAt: now + BLACK_MARKET_REFRESH,
       offerWeapon: null,
@@ -387,12 +387,13 @@ function defaultState() {
       owned: {}, // { propId: { level:number } }
     },
 
-    // MISSIONS (cooldowns)
     missions: {
-      cooldowns: {}, // { missionId: timestampMs }
+      cooldowns: {}, // { stepId: timestampMs }
+      progress: {},  // { lineId: stepIndex } 0-based
     },
 
     rivals: { defeatedCounts: {} },
+
     ui: {
       page: "crimes",
       profileView: "overview",
@@ -464,6 +465,7 @@ function sanitize(s) {
     nextRefreshAt: Date.now() + BLACK_MARKET_REFRESH,
     offerWeapon: null,
   };
+  if (typeof s.blackMarket.nextRefreshAt !== "number") s.blackMarket.nextRefreshAt = Date.now() + BLACK_MARKET_REFRESH;
 
   // PROPERTIES safety
   s.properties = s.properties || {};
@@ -479,9 +481,20 @@ function sanitize(s) {
   // MISSIONS safety
   s.missions = s.missions || {};
   s.missions.cooldowns = s.missions.cooldowns || {};
-  for (const m of MISSIONS) {
-    const t = s.missions.cooldowns[m.id];
-    if (t != null && typeof t !== "number") delete s.missions.cooldowns[m.id];
+  s.missions.progress = s.missions.progress || {};
+
+  for (const step of MISSIONS) {
+    const t = s.missions.cooldowns[step.id];
+    if (t != null && typeof t !== "number") delete s.missions.cooldowns[step.id];
+  }
+  for (const line of MISSION_LINES) {
+    const v = s.missions.progress[line.lineId];
+    if (v == null) continue;
+    if (typeof v !== "number") {
+      delete s.missions.progress[line.lineId];
+      continue;
+    }
+    s.missions.progress[line.lineId] = clamp(Math.floor(v), 0, line.steps.length - 1);
   }
 
   s.rivals = s.rivals || { defeatedCounts: {} };
@@ -579,7 +592,10 @@ function invUse(itemId) {
 ===================== */
 
 function buyShopItem(kind, itemId) {
-  const list = kind === "food" ? SHOP_FOOD : kind === "healing" ? SHOP_HEALING : null;
+  const list =
+    kind === "food" ? SHOP_FOOD :
+    kind === "healing" ? SHOP_HEALING :
+    null;
   if (!list) return;
 
   const item = list.find(x => x.id === itemId);
@@ -600,7 +616,6 @@ function buyShopItem(kind, itemId) {
   addLog(`🛒 Bought ${item.name} for $${item.price}`);
   toast("Purchased");
 }
-
 /* =====================
    GEAR HELPERS + BLACK MARKET
 ===================== */
@@ -713,7 +728,7 @@ function buyArms(kind, itemId, source = "arms") {
 }
 
 /* =====================
-   PROPERTIES (buy + upgrade)
+   PROPERTIES: BUY + UPGRADE
 ===================== */
 
 function ensureProperties() {
@@ -755,6 +770,7 @@ function upgradeProperty(propId) {
   addLog(`⬆️ Upgraded ${p.name} to Lv ${lvl + 1} for $${cost}`);
   toast("Upgraded");
 }
+
 /* =====================
    PROPERTY TRAINING BONUS
 ===================== */
@@ -763,12 +779,9 @@ function propertyTrainingBonus() {
   let bonus = 0;
   for (const p of PROPERTIES) {
     const lvl = getOwnedPropertyLevel(p.id);
-    if (lvl > 0 && p.trainingBoostPerLevel) {
-      bonus += lvl * p.trainingBoostPerLevel;
-    }
+    if (lvl > 0 && p.trainingBoostPerLevel) bonus += lvl * p.trainingBoostPerLevel;
   }
-  // cap: +15% max
-  return clamp(bonus, 0, 0.15);
+  return clamp(bonus, 0, 0.15); // cap +15%
 }
 
 /* =====================
@@ -825,19 +838,22 @@ function doCrime(crimeId) {
   const c = CRIMES.find(x => x.id === crimeId);
   if (!c) return;
 
-  if (isJailed()) return toast("You're in jail.");
-  if (isKO()) return toast("You're KO'd.");
+  if (isJailed()) return toast("You're in jail. Wait it out.");
+  if (isKO()) return toast("You're KO'd. Heal up first.");
   if (state.player.level < c.unlock) return toast(`Unlocks at Level ${c.unlock}.`);
   if (state.player.energy < c.energy) return toast("Not enough energy.");
 
   state.player.energy -= c.energy;
 
-  if (Math.random() <= clamp(c.success, 0.05, 0.95)) {
+  const successChance = clamp(c.success, 0.05, 0.95);
+  const jailChance = clamp(c.jail, 0.0, 0.95);
+
+  if (Math.random() <= successChance) {
     const cash = randInt(c.money[0], c.money[1]);
     state.player.money += cash;
     state.player.xp += c.xp;
 
-    addLog(`✅ ${c.name}: +$${cash}, +${c.xp} XP`);
+    addLog(`✅ ${c.name}: Success. +$${cash}, +${c.xp} XP`);
     toast(`Success! +$${cash}`);
     tryLevelUp();
     return;
@@ -846,14 +862,15 @@ function doCrime(crimeId) {
   const hpLoss = randInt(c.hpLoss[0], c.hpLoss[1]);
   state.player.health = clamp(state.player.health - hpLoss, 0, state.player.maxHealth);
 
-  if (Math.random() <= c.jail) {
+  const gotJailed = Math.random() <= jailChance;
+  if (gotJailed) {
     const jailMins = randInt(c.jailMin, c.jailMax);
     state.timers.jailUntil = Date.now() + jailMins * MS.MIN;
-    addLog(`🚔 ${c.name}: Jailed ${jailMins} min (-${hpLoss} HP)`);
-    toast("Caught!");
+    addLog(`🚔 ${c.name}: Caught! -${hpLoss} HP, jailed for ${jailMins} min.`);
+    toast(`Caught! Jailed ${jailMins} min`);
   } else {
-    addLog(`❌ ${c.name}: Failed (-${hpLoss} HP)`);
-    toast("Failed");
+    addLog(`❌ ${c.name}: Failed. -${hpLoss} HP (you got away).`);
+    toast("Failed (got away)");
   }
 }
 
@@ -861,26 +878,23 @@ function doCrime(crimeId) {
    FIGHTS
 ===================== */
 
-function calcDamage(atk, def) {
-  const base = atk - Math.floor(def * 0.6);
+function calcDamage(attackerAtk, defenderDef) {
+  const base = attackerAtk - Math.floor(defenderDef * 0.6);
   return Math.max(1, base);
 }
 
 function doFight(kind, id) {
-  if (isJailed()) return toast("You're in jail.");
-  if (isKO()) return toast("You're KO'd.");
+  if (isJailed()) return toast("You're in jail. No fights right now.");
+  if (isKO()) return toast("You're KO'd. Heal up first.");
 
   let target = null;
   let isRival = false;
 
   if (kind === "enemy") target = ENEMIES.find(x => x.id === id);
-  if (kind === "rival") {
-    target = RIVALS.find(x => x.id === id);
-    isRival = true;
-  }
+  if (kind === "rival") { target = RIVALS.find(x => x.id === id); isRival = true; }
   if (!target) return;
 
-  if (state.player.level < target.unlock) return toast(`Unlocks at Lv ${target.unlock}.`);
+  if (state.player.level < target.unlock) return toast(`Unlocks at Level ${target.unlock}.`);
   if (state.player.energy < target.energy) return toast("Not enough energy.");
 
   state.player.energy -= target.energy;
@@ -888,11 +902,13 @@ function doFight(kind, id) {
   let enemyHP = target.hp;
   let playerHP = state.player.health;
 
-  for (let i = 0; i < 6; i++) {
-    enemyHP -= calcDamage(playerAtk(), target.def);
+  for (let round = 0; round < 6; round++) {
+    const pDmg = calcDamage(playerAtk(), target.def);
+    enemyHP -= pDmg;
     if (enemyHP <= 0) break;
 
-    playerHP -= calcDamage(target.atk, playerDef());
+    const eDmg = calcDamage(target.atk, playerDef());
+    playerHP -= eDmg;
     if (playerHP <= 0) break;
   }
 
@@ -904,122 +920,195 @@ function doFight(kind, id) {
     state.player.money += cash;
     state.player.xp += target.xp;
 
-    if (isRival) {
-      const wins = (state.rivals.defeatedCounts[id] || 0) + 1;
-      state.rivals.defeatedCounts[id] = wins;
+    if (!isRival) {
+      state.player.reputation += (target.rep || 0);
     } else {
-      state.player.reputation += target.rep || 0;
+      const wins = (state.rivals?.defeatedCounts?.[id] || 0) + 1;
+      state.rivals.defeatedCounts[id] = wins;
+
+      if (wins === 1 || wins === 3 || wins === 5) {
+        const idx = wins === 1 ? 0 : wins === 3 ? 1 : 2;
+        const repGain = target.repMilestone?.[idx] || 0;
+        state.player.reputation += repGain;
+        addLog(`🏷️ Rival milestone! +${repGain} reputation.`);
+      }
     }
 
-    addLog(`🥊 Beat ${target.name} +$${cash}`);
-    toast("Victory!");
+    addLog(`🥊 Won vs ${target.name}. +$${cash}, +${target.xp} XP`);
+    toast(`Win! +$${cash}`);
     tryLevelUp();
   } else {
-    state.player.xp += Math.floor(target.xp * 0.25);
-    addLog(`💥 Lost vs ${target.name}`);
-    toast("Defeated");
+    const consolationXP = Math.floor(target.xp * 0.25);
+    state.player.xp += consolationXP;
+    addLog(`💥 Lost vs ${target.name}. +${consolationXP} XP`);
+    toast("You lost the fight");
     tryLevelUp();
   }
 }
 
 /* =====================
-   GYM ACTIONS (WITH PROPERTY BONUS)
+   GYM ACTIONS (NORMAL + JAIL)
 ===================== */
 
 function doGym(statKey) {
-  if (isKO()) return toast("You're KO'd.");
+  if (isKO()) return toast("You're KO'd. Heal first.");
 
   const jailed = isJailed();
   const gym = jailed ? GYM.jail : GYM.normal;
 
-  if (state.player.energy < gym.energy) return toast("Not enough energy.");
-  if (!["attack", "defense"].includes(statKey)) return;
-
-  state.player.energy -= gym.energy;
-
+  const energyCost = gym.energy;
   const bonus = propertyTrainingBonus();
   const successChance = clamp(gym.success + bonus, 0.05, 0.95);
+
+  if (state.player.energy < energyCost) return toast("Not enough energy.");
+  if (statKey !== "attack" && statKey !== "defense") return;
+
+  state.player.energy -= energyCost;
 
   if (Math.random() <= successChance) {
     state.player[statKey] += gym.gain[statKey];
     state.player.xp += gym.xp;
-
-    addLog(`🏋️ ${gym.name}: +1 ${statKey.toUpperCase()} (+${pct(bonus)}% bonus)`);
-    toast("Training success");
-    tryLevelUp();
-  } else {
-    const hpLoss = randInt(gym.failHpLoss[0], gym.failHpLoss[1]);
-    state.player.health = clamp(state.player.health - hpLoss, 0, state.player.maxHealth);
-    state.player.xp += Math.floor(gym.xp * 0.25);
-
-    addLog(`💥 ${gym.name}: Failed (-${hpLoss} HP)`);
-    toast("Training failed");
-    tryLevelUp();
-  }
-}
-
-/* =====================
-   MISSIONS — COOLDOWNS + ACTION (Step 1)
-===================== */
-
-function ensureMissions() {
-  if (!state.missions) state.missions = { cooldowns: {} };
-  if (!state.missions.cooldowns) state.missions.cooldowns = {};
-}
-
-function missionCooldownEndsAt(missionId) {
-  ensureMissions();
-  return state.missions.cooldowns[missionId] || 0;
-}
-
-function isMissionOnCooldown(missionId) {
-  return Date.now() < missionCooldownEndsAt(missionId);
-}
-
-function setMissionCooldown(missionId, minutes) {
-  ensureMissions();
-  state.missions.cooldowns[missionId] = Date.now() + minutes * MS.MIN;
-}
-
-function doMission(missionId) {
-  const m = MISSIONS.find(x => x.id === missionId);
-  if (!m) return;
-
-  if (isJailed()) return toast("You're in jail. No missions right now.");
-  if (isKO()) return toast("You're KO'd.");
-  if (state.player.level < m.unlock) return toast(`Unlocks at Level ${m.unlock}.`);
-  if (state.player.energy < m.energy) return toast("Not enough energy.");
-  if (isMissionOnCooldown(m.id)) return toast("Mission is on cooldown.");
-
-  state.player.energy -= m.energy;
-  setMissionCooldown(m.id, m.cooldownMin);
-
-  const successChance = clamp(m.success, 0.05, 0.95);
-
-  if (Math.random() <= successChance) {
-    const cash = randInt(m.money[0], m.money[1]);
-    state.player.money += cash;
-    state.player.xp += m.xp;
-
-    addLog(`🎯 ${m.name}: Success. +$${cash}, +${m.xp} XP`);
-    toast(`Mission success! +$${cash}`);
+    addLog(`🏋️ ${gym.name}: Success. +${gym.gain[statKey]} ${statKey.toUpperCase()}, +${gym.xp} XP`);
+    toast("Training success!");
     tryLevelUp();
     return;
   }
 
-  const hpLoss = randInt(m.failHpLoss[0], m.failHpLoss[1]);
+  const hpLoss = randInt(gym.failHpLoss[0], gym.failHpLoss[1]);
   state.player.health = clamp(state.player.health - hpLoss, 0, state.player.maxHealth);
 
-  const gotJailed = Math.random() < (m.failJailChance || 0);
+  const consolationXP = Math.floor(gym.xp * 0.25);
+  state.player.xp += consolationXP;
+
+  addLog(`💥 ${gym.name}: Failed. -${hpLoss} HP, +${consolationXP} XP`);
+  toast("Training failed");
+  tryLevelUp();
+}
+
+/* =====================
+   MISSIONS — CHAINS + COOLDOWNS + DROPS
+===================== */
+
+function ensureMissions() {
+  if (!state.missions) state.missions = { cooldowns: {}, progress: {} };
+  if (!state.missions.cooldowns) state.missions.cooldowns = {};
+  if (!state.missions.progress) state.missions.progress = {};
+}
+
+function missionCooldownEndsAt(stepId) {
+  ensureMissions();
+  return state.missions.cooldowns[stepId] || 0;
+}
+
+function isMissionOnCooldown(stepId) {
+  return Date.now() < missionCooldownEndsAt(stepId);
+}
+
+function setMissionCooldown(stepId, minutes) {
+  ensureMissions();
+  state.missions.cooldowns[stepId] = Date.now() + minutes * MS.MIN;
+}
+
+function getMissionLineByStepId(stepId) {
+  for (const line of MISSION_LINES) {
+    const idx = line.steps.findIndex(s => s.id === stepId);
+    if (idx !== -1) return { line, idx };
+  }
+  return null;
+}
+
+function getCurrentStepIndex(lineId) {
+  ensureMissions();
+  const idx = state.missions.progress[lineId];
+  if (typeof idx !== "number") return 0;
+  const line = MISSION_LINES.find(l => l.lineId === lineId);
+  return clamp(Math.floor(idx), 0, (line?.steps?.length || 1) - 1);
+}
+
+function setCurrentStepIndex(lineId, idx) {
+  ensureMissions();
+  state.missions.progress[lineId] = idx;
+}
+
+function advanceMissionLine(lineId) {
+  const line = MISSION_LINES.find(l => l.lineId === lineId);
+  if (!line) return;
+
+  const idx = getCurrentStepIndex(lineId);
+  const next = Math.min(line.steps.length - 1, idx + 1);
+  setCurrentStepIndex(lineId, next);
+}
+
+function resetMissionLine(lineId) {
+  setCurrentStepIndex(lineId, 0);
+}
+
+function doMission(stepId) {
+  const step = MISSIONS.find(x => x.id === stepId);
+  if (!step) return;
+
+  if (isJailed()) return toast("You're in jail. No missions right now.");
+  if (isKO()) return toast("You're KO'd. Heal up first.");
+
+  const link = getMissionLineByStepId(stepId);
+  if (!link) return;
+
+  if (state.player.level < link.line.unlock) return toast(`Unlocks at Level ${link.line.unlock}.`);
+  if (state.player.energy < step.energy) return toast("Not enough energy.");
+  if (isMissionOnCooldown(step.id)) return toast("Mission is on cooldown.");
+
+  const currentIdx = getCurrentStepIndex(link.line.lineId);
+  if (currentIdx !== link.idx) return toast("Finish the current step first.");
+
+  state.player.energy -= step.energy;
+  setMissionCooldown(step.id, step.cooldownMin);
+
+  if (step.flavor) addLog(`🗺️ ${step.name}: ${step.flavor}`);
+
+  const successChance = clamp(step.success, 0.05, 0.95);
+
+  if (Math.random() <= successChance) {
+    const cash = randInt(step.money[0], step.money[1]);
+    state.player.money += cash;
+    state.player.xp += step.xp;
+
+    addLog(`🎯 ${step.name}: Success. +$${cash}, +${step.xp} XP`);
+    toast(`Mission success! +$${cash}`);
+    tryLevelUp();
+
+    const drop = rollMissionDrop();
+    if (drop) {
+      invAdd({ id: drop.id, name: drop.name, type: drop.type, energy: drop.energy || 0, health: drop.health || 0 });
+      addLog(`🎁 Found ${drop.name}! (added to inventory)`);
+      toast("Drop found!");
+    }
+
+    if (link.idx >= link.line.steps.length - 1) {
+      resetMissionLine(link.line.lineId);
+      addLog(`✅ Completed mission line: ${link.line.name}`);
+    } else {
+      advanceMissionLine(link.line.lineId);
+      addLog(`➡️ Next step unlocked: ${link.line.name}`);
+    }
+
+    return;
+  }
+
+  const hpLoss = randInt(step.failHpLoss[0], step.failHpLoss[1]);
+  state.player.health = clamp(state.player.health - hpLoss, 0, state.player.maxHealth);
+
+  const gotJailed = Math.random() < (step.failJailChance || 0);
   if (gotJailed) {
-    const jailMins = randInt(m.failJailMin || 2, m.failJailMax || 4);
+    const jailMins = randInt(step.failJailMin || 2, step.failJailMax || 4);
     state.timers.jailUntil = Date.now() + jailMins * MS.MIN;
-    addLog(`🚔 ${m.name}: Failed. -${hpLoss} HP, jailed ${jailMins} min.`);
+    addLog(`🚔 ${step.name}: Failed. -${hpLoss} HP, jailed for ${jailMins} min.`);
     toast("Mission failed — jailed!");
   } else {
-    addLog(`❌ ${m.name}: Failed. -${hpLoss} HP.`);
+    addLog(`❌ ${step.name}: Failed. -${hpLoss} HP.`);
     toast("Mission failed");
   }
+
+  resetMissionLine(link.line.lineId);
 }
 
 /* =====================
@@ -1076,452 +1165,32 @@ const profileGearBox = document.getElementById("profileGear");
 const profilePropsBox = document.getElementById("profileProps");
 
 /* =====================
-   PAGE RENDERS
+   NAVIGATION
 ===================== */
 
-function renderCrimesPage() {
-  const jailed = isJailed();
-  const ko = isKO();
+const pages = document.querySelectorAll(".page");
+const navButtons = document.querySelectorAll(".nav__btn");
+const topNav = document.getElementById("topNav");
 
-  pageCrimes.innerHTML = `
-    <div class="card">
-      <div class="section-title">Crimes</div>
-      <div class="muted">Spend energy to commit crimes. Higher crimes are riskier.</div>
-      <div class="hr"></div>
-      <div class="muted">Status: ${jailed ? `🚔 In Jail` : ko ? `💫 KO (heal first)` : `✅ Free`}</div>
-    </div>
-
-    <div class="card" style="margin-top:12px;">
-      <div class="list">
-        ${CRIMES.map(c => {
-          const locked = state.player.level < c.unlock;
-          const disabled = jailed || ko || locked || state.player.energy < c.energy;
-
-          return `
-            <div class="row">
-              <div class="row__left">
-                <div class="row__title">${c.name}</div>
-                <div class="row__sub">
-                  +$${c.money[0]}–$${c.money[1]} • +${c.xp} XP •
-                  Success ${pct(c.success)}% • Jail ${pct(c.jail)}%
-                </div>
-              </div>
-              <div class="row__right">
-                ${locked ? `<span class="tag">Unlock Lv ${c.unlock}</span>` : `<span class="tag">Energy ${c.energy}</span>`}
-                <button class="btn btn--small btn--primary"
-                  data-action="doCrime"
-                  data-crime="${c.id}"
-                  ${disabled ? "disabled" : ""}>
-                  Do
-                </button>
-              </div>
-            </div>
-          `;
-        }).join("")}
-      </div>
-    </div>
-  `;
+function showPage(id) {
+  pages.forEach(p => (p.hidden = p.dataset.page !== id));
+  navButtons.forEach(b =>
+    b.classList.toggle("nav__btn--active", b.dataset.route === id)
+  );
+  state.ui.page = id;
+  save();
 }
 
-function renderFightsPage() {
-  const jailed = isJailed();
-  const ko = isKO();
-
-  const enemyList = ENEMIES.map(e => {
-    const locked = state.player.level < e.unlock;
-    const disabled = jailed || ko || locked || state.player.energy < e.energy;
-    return `
-      <div class="row">
-        <div class="row__left">
-          <div class="row__title">🥊 ${e.name}</div>
-          <div class="row__sub">
-            +$${e.money[0]}–$${e.money[1]} • +${e.xp} XP • Rep +${e.rep || 0}
-          </div>
-        </div>
-        <div class="row__right">
-          ${locked ? `<span class="tag">Unlock Lv ${e.unlock}</span>` : `<span class="tag">Energy ${e.energy}</span>`}
-          <button class="btn btn--small btn--primary"
-            data-action="doFight"
-            data-kind="enemy"
-            data-fight="${e.id}"
-            ${disabled ? "disabled" : ""}>
-            Fight
-          </button>
-        </div>
-      </div>
-    `;
-  }).join("");
-
-  const rivalList = RIVALS.map(r => {
-    const locked = state.player.level < r.unlock;
-    const disabled = jailed || ko || locked || state.player.energy < r.energy;
-    const wins = state.rivals?.defeatedCounts?.[r.id] || 0;
-
-    return `
-      <div class="row">
-        <div class="row__left">
-          <div class="row__title">👑 ${r.name}</div>
-          <div class="row__sub">
-            Wins: ${wins} • +$${r.money[0]}–$${r.money[1]} • +${r.xp} XP
-          </div>
-        </div>
-        <div class="row__right">
-          ${locked ? `<span class="tag">Unlock Lv ${r.unlock}</span>` : `<span class="tag">Energy ${r.energy}</span>`}
-          <button class="btn btn--small btn--gold"
-            data-action="doFight"
-            data-kind="rival"
-            data-fight="${r.id}"
-            ${disabled ? "disabled" : ""}>
-            Rival
-          </button>
-        </div>
-      </div>
-    `;
-  }).join("");
-
-  pageFights.innerHTML = `
-    <div class="card">
-      <div class="section-title">Fights</div>
-      <div class="muted">Battle enemies for cash, XP, and reputation.</div>
-      <div class="hr"></div>
-      <div class="muted">Status: ${jailed ? `🚔 In Jail` : ko ? `💫 KO (heal first)` : `✅ Free`}</div>
-    </div>
-
-    <div class="card" style="margin-top:12px;">
-      <div class="section-title" style="margin-top:0;">Enemies</div>
-      <div class="list">${enemyList}</div>
-    </div>
-
-    <div class="card" style="margin-top:12px;">
-      <div class="section-title" style="margin-top:0;">Rivals</div>
-      <div class="list">${rivalList}</div>
-    </div>
-  `;
-}
-
-function renderGymPage() {
-  const jailed = isJailed();
-  const ko = isKO();
-  const gym = jailed ? GYM.jail : GYM.normal;
-
-  const bonus = propertyTrainingBonus();
-  const shownChance = clamp(gym.success + bonus, 0.05, 0.95);
-
-  pageGym.innerHTML = `
-    <div class="card">
-      <div class="section-title">${gym.name}</div>
-      <div class="muted">
-        Train to increase Attack / Defense.
-        ${bonus > 0 ? `<br>🏠 Property boost: <b>+${pct(bonus)}%</b> gym success` : ``}
-        ${jailed ? `<br><b>Jail Gym is only visible while jailed.</b>` : ``}
-      </div>
-      <div class="hr"></div>
-      <div class="muted">
-        Cost: ${gym.energy} Energy • Success: <b>${pct(shownChance)}%</b> • +${gym.xp} XP
-      </div>
-    </div>
-
-    <div class="card" style="margin-top:12px;">
-      <div class="grid grid--2">
-        <button class="btn btn--primary"
-          data-action="doGym"
-          data-stat="attack"
-          ${ko || state.player.energy < gym.energy ? "disabled" : ""}>
-          Train Attack (+1)
-        </button>
-
-        <button class="btn btn--success"
-          data-action="doGym"
-          data-stat="defense"
-          ${ko || state.player.energy < gym.energy ? "disabled" : ""}>
-          Train Defense (+1)
-        </button>
-      </div>
-
-      ${jailed ? `
-        <div class="hr"></div>
-        <div class="muted">
-          Time left in jail: <b>${msToClock((state.timers.jailUntil || 0) - Date.now())}</b>
-        </div>
-      ` : ``}
-    </div>
-  `;
-}
-
-function renderShopPage() {
-  pageShop.innerHTML = `
-    <div class="card">
-      <div class="section-title">Shop</div>
-      <div class="muted">Food goes to your inventory (Energy). Healing items restore Health.</div>
-    </div>
-
-    <div class="card" style="margin-top:12px;">
-      <div class="section-title" style="margin-top:0;">Food (Energy)</div>
-      <div class="list">
-        ${SHOP_FOOD.map(it => `
-          <div class="row">
-            <div class="row__left">
-              <div class="row__title">${it.name}</div>
-              <div class="row__sub">${it.desc}</div>
-            </div>
-            <div class="row__right">
-              <span class="tag">${fmtMoney(it.price)}</span>
-              <button class="btn btn--small btn--primary"
-                data-action="buyShop"
-                data-kind="food"
-                data-item="${it.id}"
-                ${state.player.money < it.price ? "disabled" : ""}>
-                Buy
-              </button>
-            </div>
-          </div>
-        `).join("")}
-      </div>
-    </div>
-
-    <div class="card" style="margin-top:12px;">
-      <div class="section-title" style="margin-top:0;">Healing</div>
-      <div class="list">
-        ${SHOP_HEALING.map(it => `
-          <div class="row">
-            <div class="row__left">
-              <div class="row__title">${it.name}</div>
-              <div class="row__sub">${it.desc}</div>
-            </div>
-            <div class="row__right">
-              <span class="tag">${fmtMoney(it.price)}</span>
-              <button class="btn btn--small btn--success"
-                data-action="buyShop"
-                data-kind="healing"
-                data-item="${it.id}"
-                ${state.player.money < it.price ? "disabled" : ""}>
-                Buy
-              </button>
-            </div>
-          </div>
-        `).join("")}
-      </div>
-    </div>
-  `;
-}
-
-function renderArmsPage() {
-  refreshBlackMarketIfNeeded();
-
-  const bm = state.blackMarket?.offerWeapon;
-  const bmTimer = Math.max(0, (state.blackMarket?.nextRefreshAt || 0) - Date.now());
-
-  pageArms.innerHTML = `
-    <div class="card">
-      <div class="section-title">Arms Dealer</div>
-      <div class="muted">Weapons and armor boost your Attack/Defense. Equip from Profile → Weapons & Armor.</div>
-    </div>
-
-    <div class="card" style="margin-top:12px;">
-      <div class="section-title" style="margin-top:0;">Weapons</div>
-      <div class="list">
-        ${WEAPONS.map(w => `
-          <div class="row">
-            <div class="row__left">
-              <div class="row__title">${w.name}</div>
-              <div class="row__sub">Attack +${w.atk}</div>
-            </div>
-            <div class="row__right">
-              <span class="tag">${fmtMoney(w.price)}</span>
-              <button class="btn btn--small btn--primary"
-                data-action="buyArms"
-                data-kind="weapon"
-                data-item="${w.id}"
-                ${state.player.money < w.price ? "disabled" : ""}>
-                Buy
-              </button>
-            </div>
-          </div>
-        `).join("")}
-      </div>
-    </div>
-
-    <div class="card" style="margin-top:12px;">
-      <div class="section-title" style="margin-top:0;">Armor</div>
-      <div class="list">
-        ${ARMOR.map(a => `
-          <div class="row">
-            <div class="row__left">
-              <div class="row__title">${a.name}</div>
-              <div class="row__sub">Defense +${a.def}</div>
-            </div>
-            <div class="row__right">
-              <span class="tag">${fmtMoney(a.price)}</span>
-              <button class="btn btn--small btn--success"
-                data-action="buyArms"
-                data-kind="armor"
-                data-item="${a.id}"
-                ${state.player.money < a.price ? "disabled" : ""}>
-                Buy
-              </button>
-            </div>
-          </div>
-        `).join("")}
-      </div>
-    </div>
-
-    <div class="card" style="margin-top:12px;">
-      <div class="section-title" style="margin-top:0;">🌑 Black Market</div>
-      <div class="muted">Refreshes every 45 minutes • 1% chance of a GOLD weapon</div>
-      <div class="hr"></div>
-
-      ${bm ? `
-        <div class="row">
-          <div class="row__left">
-            <div class="row__title">${bm.name} ${bm.rarity === "gold" ? `<span class="tag tag--gold">GOLD</span>` : ``}</div>
-            <div class="row__sub">Attack +${bm.atk}</div>
-          </div>
-          <div class="row__right">
-            <span class="tag">${fmtMoney(bm.price)}</span>
-            <button class="btn btn--small ${bm.rarity === "gold" ? "btn--gold" : "btn--primary"}"
-              data-action="buyBM"
-              ${state.player.money < bm.price ? "disabled" : ""}>
-              Buy
-            </button>
-          </div>
-        </div>
-      ` : `
-        <div class="muted">No offer right now. Next refresh in <b>${msToClock(bmTimer)}</b>.</div>
-      `}
-      <div class="hint">Next refresh in <b>${msToClock(bmTimer)}</b>.</div>
-    </div>
-  `;
-}
-
-function renderPropertiesPage() {
-  const incomeHr = getTotalIncomePerHour();
-
-  pageProperties.innerHTML = `
-    <div class="card">
-      <div class="section-title">Properties</div>
-      <div class="muted">
-        Buy and upgrade properties for passive income.<br>
-        Offline income is capped at <b>4 hours</b>.
-      </div>
-      <div class="hr"></div>
-      <div class="muted">Current passive income: <b>${fmtMoney(incomeHr)}/hr</b></div>
-    </div>
-
-    <div class="card" style="margin-top:12px;">
-      <div class="list">
-        ${PROPERTIES.map(p => {
-          const lvl = getOwnedPropertyLevel(p.id);
-          const owned = lvl > 0;
-
-          const buyDisabled = owned || state.player.money < p.buyPrice;
-          const upCost = getUpgradeCost(p.id);
-          const canUpgrade = owned && lvl < p.maxLevel;
-          const upDisabled = !canUpgrade || state.player.money < upCost;
-
-          const perHr = owned ? (p.baseIncomePerHour * lvl) : 0;
-
-          return `
-            <div class="row">
-              <div class="row__left">
-                <div class="row__title">${p.name} ${owned ? `<span class="tag">Lv ${lvl}</span>` : ``}</div>
-                <div class="row__sub">
-                  ${p.desc}<br>
-                  Income: <b>${fmtMoney(perHr)}/hr</b> ${owned ? `( +${fmtMoney(p.baseIncomePerHour)}/hr per level )` : `( ${fmtMoney(p.baseIncomePerHour)}/hr per level )`}
-                </div>
-              </div>
-
-              <div class="row__right">
-                ${!owned ? `
-                  <span class="tag">${fmtMoney(p.buyPrice)}</span>
-                  <button class="btn btn--small btn--gold"
-                    data-action="buyProperty"
-                    data-prop="${p.id}"
-                    ${buyDisabled ? "disabled" : ""}>
-                    Buy
-                  </button>
-                ` : `
-                  ${lvl >= p.maxLevel ? `<span class="tag">Max</span>` : `<span class="tag">${fmtMoney(upCost)}</span>`}
-                  <button class="btn btn--small btn--primary"
-                    data-action="upgradeProperty"
-                    data-prop="${p.id}"
-                    ${upDisabled ? "disabled" : ""}>
-                    Upgrade
-                  </button>
-                `}
-              </div>
-            </div>
-          `;
-        }).join("")}
-      </div>
-    </div>
-  `;
-}
+topNav.addEventListener("click", e => {
+  const btn = e.target.closest(".nav__btn");
+  if (!btn || btn.disabled) return;
+  showPage(btn.dataset.route);
+  render();
+});
 
 /* =====================
-   MISSIONS PAGE (Step 1)
+   PROFILE SUBVIEWS
 ===================== */
-
-function renderMissionsPage() {
-  const jailed = isJailed();
-  const ko = isKO();
-
-  pageMissions.innerHTML = `
-    <div class="card">
-      <div class="section-title">Missions</div>
-      <div class="muted">
-        Missions have their own cooldowns and are separate from crimes.<br>
-        ${jailed ? `<b>🚔 You cannot do missions while in jail.</b>` : ``}
-      </div>
-    </div>
-
-    <div class="card" style="margin-top:12px;">
-      <div class="list">
-        ${MISSIONS.map(m => {
-          const locked = state.player.level < m.unlock;
-          const cdEnds = missionCooldownEndsAt(m.id);
-          const cdLeft = Math.max(0, cdEnds - Date.now());
-          const onCd = cdLeft > 0;
-
-          const disabled =
-            jailed || ko || locked || onCd || state.player.energy < m.energy;
-
-          return `
-            <div class="row">
-              <div class="row__left">
-                <div class="row__title">${m.name}</div>
-                <div class="row__sub">
-                  ${m.desc}<br>
-                  Reward: +$${m.money[0]}–$${m.money[1]} • +${m.xp} XP • Success ${pct(m.success)}%
-                </div>
-              </div>
-              <div class="row__right">
-                ${locked ? `<span class="tag">Unlock Lv ${m.unlock}</span>` : `<span class="tag">Energy ${m.energy}</span>`}
-                <span class="tag">${m.cooldownMin}m CD</span>
-                ${onCd ? `<span class="tag">⏳ ${msToClock(cdLeft)}</span>` : ``}
-                <button class="btn btn--small btn--primary"
-                  data-action="doMission"
-                  data-mission="${m.id}"
-                  ${disabled ? "disabled" : ""}>
-                  Run
-                </button>
-              </div>
-            </div>
-          `;
-        }).join("")}
-      </div>
-    </div>
-  `;
-}
-
-/* =====================
-   PROFILE RENDERS
-===================== */
-
-function renderHUD() {
-  hudMoney.textContent = fmtMoney(state.player.money);
-  hudLevel.textContent = `Lv ${state.player.level}`;
-  hudTitle.textContent = state.player.title;
-}
 
 function openProfileView(view) {
   document.querySelectorAll("[data-profile-view]").forEach(v => {
@@ -1531,11 +1200,54 @@ function openProfileView(view) {
   save();
 }
 
-function renderProfileTop() {
+/* =====================
+   CLICK HANDLER
+===================== */
+
+document.body.addEventListener("click", e => {
+  const btn = e.target.closest("[data-action]");
+  if (!btn) return;
+
+  const a = btn.dataset.action;
+
+  if (a === "openProfileView") openProfileView(btn.dataset.view);
+  if (a === "doCrime") doCrime(btn.dataset.crime);
+  if (a === "doFight") doFight(btn.dataset.kind, btn.dataset.fight);
+  if (a === "doGym") doGym(btn.dataset.stat);
+  if (a === "buyShop") buyShopItem(btn.dataset.kind, btn.dataset.item);
+  if (a === "useInv") invUse(btn.dataset.item);
+  if (a === "buyArms") buyArms(btn.dataset.kind, btn.dataset.item);
+  if (a === "buyBM") buyArms("weapon", null, "blackmarket");
+  if (a === "equipWeapon") equipWeaponByIndex(+btn.dataset.idx);
+  if (a === "equipArmor") equipArmorByIndex(+btn.dataset.idx);
+  if (a === "buyProperty") buyProperty(btn.dataset.prop);
+  if (a === "upgradeProperty") upgradeProperty(btn.dataset.prop);
+  if (a === "doMission") doMission(btn.dataset.mission);
+
+  if (a === "hardReset" && confirm("Reset all progress?")) {
+    localStorage.removeItem(SAVE_KEY);
+    location.reload();
+  }
+
+  save();
+  render();
+});
+
+/* =====================
+   RENDER: HUD + PROFILE
+===================== */
+
+function renderHUD() {
+  hudMoney.textContent = fmtMoney(state.player.money);
+  hudLevel.textContent = `Lv ${state.player.level}`;
+  hudTitle.textContent = state.player.title;
+}
+
+function renderProfile() {
   profileAvatar.textContent = state.player.avatar;
   profileName.textContent = state.player.name;
   profileTitleBadge.textContent = state.player.title;
-  if (profileSpecBadge) profileSpecBadge.textContent = "No Specialization";
+  profileSpecBadge.textContent = "No Specialization";
 
   const xpNeed = xpNeededForLevel(state.player.level);
   xpText.textContent = `${state.player.xp} / ${xpNeed}`;
@@ -1551,7 +1263,6 @@ function renderProfileTop() {
   statAtk.textContent = state.player.attack;
   statDef.textContent = state.player.defense;
   statIncome.textContent = `${fmtMoney(getTotalIncomePerHour())}/hr`;
-
   statJail.textContent = isJailed() ? "Yes" : "No";
   statKO.textContent = isKO() ? "Yes" : "No";
 
@@ -1559,26 +1270,24 @@ function renderProfileTop() {
   openProfileView(state.ui.profileView);
 }
 
-function renderProfileInventory() {
-  if (!profileInventoryBox) return;
-  const inv = Object.values(state.inventory);
+/* =====================
+   RENDER: PAGES
+===================== */
 
-  if (!inv.length) {
-    profileInventoryBox.innerHTML = `<div class="muted">Inventory empty.</div>`;
-    return;
-  }
-
-  profileInventoryBox.innerHTML = `
+function renderCrimesPage() {
+  pageCrimes.innerHTML = `
+    <div class="section-title">Crimes</div>
     <div class="list">
-      ${inv.map(it => `
+      ${CRIMES.map(c => `
         <div class="row">
           <div class="row__left">
-            <div class="row__title">${it.name} ×${it.quantity}</div>
+            <div class="row__title">${c.name}</div>
+            <div class="row__sub">Lv ${c.unlock} · ${c.energy} Energy</div>
           </div>
           <div class="row__right">
             <button class="btn btn--small btn--primary"
-              data-action="useInv" data-item="${it.id}">
-              Use
+              data-action="doCrime" data-crime="${c.id}">
+              Do
             </button>
           </div>
         </div>
@@ -1587,101 +1296,42 @@ function renderProfileInventory() {
   `;
 }
 
-function renderProfileGear() {
-  if (!profileGearBox) return;
+function renderFightsPage() {
+  pageFights.innerHTML = `
+    <div class="section-title">Fights</div>
 
-  const weapons = state.gear?.weapons || [];
-  const armor = state.gear?.armor || [];
-  const eqW = state.equipment?.weapon;
-  const eqA = state.equipment?.armor;
-
-  profileGearBox.innerHTML = `
-    <div class="section-title" style="margin-top:0;">Equipped</div>
-    <div class="muted">
-      Weapon: <b>${eqW ? `${eqW.name} (+${eqW.atk})` : "None"}</b><br>
-      Armor: <b>${eqA ? `${eqA.name} (+${eqA.def})` : "None"}</b>
-    </div>
-    <div class="hr"></div>
-
-    <div class="section-title" style="margin-top:0;">Weapons</div>
+    <div class="section-title">Enemies</div>
     <div class="list">
-      ${weapons.length ? weapons.map((w, idx) => `
+      ${ENEMIES.map(e => `
         <div class="row">
           <div class="row__left">
-            <div class="row__title">${w.name}</div>
-            <div class="row__sub">Attack +${w.atk}</div>
+            <div class="row__title">${e.name}</div>
+            <div class="row__sub">Lv ${e.unlock} · ${e.energy} Energy</div>
           </div>
           <div class="row__right">
-            ${w.rarity === "gold" ? `<span class="tag tag--gold">GOLD</span>` : ``}
-            <button class="btn btn--small btn--secondary"
-              data-action="equipWeapon" data-idx="${idx}">
-              Equip
+            <button class="btn btn--small btn--danger"
+              data-action="doFight" data-kind="enemy" data-fight="${e.id}">
+              Fight
             </button>
           </div>
         </div>
-      `).join("") : `<div class="muted">No weapons owned yet.</div>`}
+      `).join("")}
     </div>
 
-    <div class="hr"></div>
-
-    <div class="section-title" style="margin-top:0;">Armor</div>
+    <div class="section-title">Rivals</div>
     <div class="list">
-      ${armor.length ? armor.map((a, idx) => `
-        <div class="row">
-          <div class="row__left">
-            <div class="row__title">${a.name}</div>
-            <div class="row__sub">Defense +${a.def}</div>
-          </div>
-          <div class="row__right">
-            <button class="btn btn--small btn--secondary"
-              data-action="equipArmor" data-idx="${idx}">
-              Equip
-            </button>
-          </div>
-        </div>
-      `).join("") : `<div class="muted">No armor owned yet.</div>`}
-    </div>
-  `;
-}
-
-function renderProfileProps() {
-  if (!profilePropsBox) return;
-
-  const owned = state.properties?.owned || {};
-  const ownedList = PROPERTIES.filter(p => (owned[p.id]?.level || 0) > 0);
-
-  if (!ownedList.length) {
-    profilePropsBox.innerHTML = `<div class="muted">No properties owned yet.</div>`;
-    return;
-  }
-
-  profilePropsBox.innerHTML = `
-    <div class="muted" style="margin-bottom:10px;">
-      Passive income: <b>${fmtMoney(getTotalIncomePerHour())}/hr</b>
-    </div>
-
-    <div class="list">
-      ${ownedList.map(p => {
-        const lvl = owned[p.id].level;
-        const maxed = lvl >= p.maxLevel;
-        const upCost = getUpgradeCost(p.id);
-        const upDisabled = maxed || state.player.money < upCost;
-
+      ${RIVALS.map(r => {
+        const wins = state.rivals?.defeatedCounts?.[r.id] || 0;
         return `
           <div class="row">
             <div class="row__left">
-              <div class="row__title">${p.name} <span class="tag">Lv ${lvl}</span></div>
-              <div class="row__sub">
-                Income: <b>${fmtMoney(p.baseIncomePerHour * lvl)}/hr</b>
-              </div>
+              <div class="row__title">${r.name}</div>
+              <div class="row__sub">Lv ${r.unlock} · ${r.energy} Energy · Wins: ${wins}</div>
             </div>
             <div class="row__right">
-              ${maxed ? `<span class="tag">Max</span>` : `<span class="tag">${fmtMoney(upCost)}</span>`}
-              <button class="btn btn--small btn--primary"
-                data-action="upgradeProperty"
-                data-prop="${p.id}"
-                ${upDisabled ? "disabled" : ""}>
-                Upgrade
+              <button class="btn btn--small btn--danger"
+                data-action="doFight" data-kind="rival" data-fight="${r.id}">
+                Fight
               </button>
             </div>
           </div>
@@ -1691,68 +1341,276 @@ function renderProfileProps() {
   `;
 }
 
-/* =====================
-   NAVIGATION
-===================== */
-
-const pages = document.querySelectorAll(".page");
-const navButtons = document.querySelectorAll(".nav__btn");
-
-function showPage(id) {
-  pages.forEach(p => (p.hidden = p.dataset.page !== id));
-  navButtons.forEach(b =>
-    b.classList.toggle("nav__btn--active", b.dataset.route === id)
-  );
-  state.ui.page = id;
-  save();
+function renderGymPage() {
+  pageGym.innerHTML = `
+    <div class="section-title">${isJailed() ? "Jail Gym" : "Gym"}</div>
+    <div class="muted">Property training bonus: +${pct(propertyTrainingBonus())}% success</div>
+    <div class="hr"></div>
+    <div class="grid grid--2">
+      <button class="btn btn--success" data-action="doGym" data-stat="attack">Train Attack</button>
+      <button class="btn btn--success" data-action="doGym" data-stat="defense">Train Defense</button>
+    </div>
+  `;
 }
 
-const topNav = document.getElementById("topNav");
-topNav.addEventListener("click", e => {
-  const btn = e.target.closest(".nav__btn");
-  if (!btn || btn.disabled) return;
-  showPage(btn.dataset.route);
-  render();
-});
+function renderShopPage() {
+  pageShop.innerHTML = `
+    <div class="section-title">Shop</div>
+
+    <div class="section-title">Food</div>
+    <div class="list">
+      ${SHOP_FOOD.map(i => `
+        <div class="row">
+          <div class="row__left">
+            <div class="row__title">${i.name}</div>
+            <div class="row__sub">${i.desc}</div>
+          </div>
+          <div class="row__right">
+            <span class="tag">${fmtMoney(i.price)}</span>
+            <button class="btn btn--small btn--primary"
+              data-action="buyShop" data-kind="food" data-item="${i.id}">
+              Buy
+            </button>
+          </div>
+        </div>
+      `).join("")}
+    </div>
+
+    <div class="section-title">Healing</div>
+    <div class="list">
+      ${SHOP_HEALING.map(i => `
+        <div class="row">
+          <div class="row__left">
+            <div class="row__title">${i.name}</div>
+            <div class="row__sub">${i.desc}</div>
+          </div>
+          <div class="row__right">
+            <span class="tag">${fmtMoney(i.price)}</span>
+            <button class="btn btn--small btn--primary"
+              data-action="buyShop" data-kind="healing" data-item="${i.id}">
+              Buy
+            </button>
+          </div>
+        </div>
+      `).join("")}
+    </div>
+  `;
+}
+
+function renderArmsPage() {
+  refreshBlackMarketIfNeeded();
+
+  const bm = state.blackMarket.offerWeapon;
+  const cdMs = state.blackMarket.nextRefreshAt - Date.now();
+
+  pageArms.innerHTML = `
+    <div class="section-title">Arms Dealer</div>
+
+    <div class="section-title">Weapons</div>
+    <div class="list">
+      ${WEAPONS.map(w => `
+        <div class="row">
+          <div class="row__left">
+            <div class="row__title">${w.name}</div>
+            <div class="row__sub">ATK +${w.atk}</div>
+          </div>
+          <div class="row__right">
+            <span class="tag">${fmtMoney(w.price)}</span>
+            <button class="btn btn--small btn--primary"
+              data-action="buyArms" data-kind="weapon" data-item="${w.id}">
+              Buy
+            </button>
+          </div>
+        </div>
+      `).join("")}
+    </div>
+
+    <div class="section-title">Armor</div>
+    <div class="list">
+      ${ARMOR.map(a => `
+        <div class="row">
+          <div class="row__left">
+            <div class="row__title">${a.name}</div>
+            <div class="row__sub">DEF +${a.def}</div>
+          </div>
+          <div class="row__right">
+            <span class="tag">${fmtMoney(a.price)}</span>
+            <button class="btn btn--small btn--primary"
+              data-action="buyArms" data-kind="armor" data-item="${a.id}">
+              Buy
+            </button>
+          </div>
+        </div>
+      `).join("")}
+    </div>
+
+    <div class="section-title">Black Market</div>
+    <div class="muted">Refreshes in ${msToClock(cdMs)}</div>
+    <div class="hr"></div>
+
+    ${bm ? `
+      <div class="card">
+        <div class="row">
+          <div class="row__left">
+            <div class="row__title">${bm.name}</div>
+            <div class="row__sub">ATK +${bm.atk} · ${bm.rarity === "gold" ? "GOLD (1%)" : "Black Market"}</div>
+          </div>
+          <div class="row__right">
+            <span class="tag ${bm.rarity === "gold" ? "tag--gold" : ""}">${fmtMoney(bm.price)}</span>
+            <button class="btn btn--gold btn--small" data-action="buyBM">Buy</button>
+          </div>
+        </div>
+      </div>
+    ` : `<div class="muted">No offer right now.</div>`}
+  `;
+}
+
+function renderPropertiesPage() {
+  pageProperties.innerHTML = `
+    <div class="section-title">Properties</div>
+    <div class="muted">Offline income is capped at 4 hours.</div>
+    <div class="hr"></div>
+    <div class="list">
+      ${PROPERTIES.map(p => {
+        const lvl = getOwnedPropertyLevel(p.id);
+        const income = p.baseIncomePerHour * (lvl || 0);
+        const canUpgrade = lvl > 0 && lvl < p.maxLevel;
+
+        return `
+          <div class="row">
+            <div class="row__left">
+              <div class="row__title">${p.name}</div>
+              <div class="row__sub">
+                ${p.desc}<br>
+                Level: ${lvl || 0}${lvl ? ` / ${p.maxLevel}` : ""} · Income: ${fmtMoney(income)}/hr
+              </div>
+            </div>
+            <div class="row__right">
+              ${lvl === 0
+                ? `<button class="btn btn--small btn--primary" data-action="buyProperty" data-prop="${p.id}">
+                     Buy ${fmtMoney(p.buyPrice)}
+                   </button>`
+                : canUpgrade
+                  ? `<button class="btn btn--small btn--success" data-action="upgradeProperty" data-prop="${p.id}">
+                       Upgrade ${fmtMoney(getUpgradeCost(p.id))}
+                     </button>`
+                  : `<span class="tag">Max</span>`
+              }
+            </div>
+          </div>
+        `;
+      }).join("")}
+    </div>
+  `;
+}
+
+function renderMissionsPage() {
+  pageMissions.innerHTML = `
+    <div class="section-title">Missions</div>
+    ${MISSION_LINES.map(line => {
+      const idx = getCurrentStepIndex(line.lineId);
+      const step = line.steps[idx];
+      const cd = missionCooldownEndsAt(step.id) - Date.now();
+      const onCd = cd > 0;
+
+      return `
+        <div class="card">
+          <div class="row">
+            <div class="row__left">
+              <div class="row__title">${line.name} — Step ${idx + 1}</div>
+              <div class="row__sub">${step.name} · ${step.energy} Energy · Unlock: Lv ${line.unlock}</div>
+            </div>
+            <div class="row__right">
+              ${onCd
+                ? `<span class="tag">Cooldown ${msToClock(cd)}</span>`
+                : `<button class="btn btn--small btn--primary"
+                    data-action="doMission" data-mission="${step.id}">
+                    Start
+                  </button>`
+              }
+            </div>
+          </div>
+        </div>
+      `;
+    }).join("")}
+  `;
+}
 
 /* =====================
-   CLICK HANDLER
+   PROFILE INVENTORY / GEAR / PROPS
 ===================== */
 
-document.body.addEventListener("click", e => {
-  const btn = e.target.closest("[data-action]");
-  if (!btn) return;
+function renderProfileInventory() {
+  const inv = Object.values(state.inventory);
+  profileInventoryBox.innerHTML = inv.length
+    ? `<div class="list">${inv.map(it => `
+        <div class="row">
+          <div class="row__left">
+            <div class="row__title">${it.name} ×${it.quantity}</div>
+          </div>
+          <div class="row__right">
+            <button class="btn btn--small btn--primary" data-action="useInv" data-item="${it.id}">Use</button>
+          </div>
+        </div>
+      `).join("")}</div>`
+    : `<div class="muted">Inventory empty.</div>`;
+}
 
-  const a = btn.dataset.action;
+function renderProfileGear() {
+  const wEq = state.equipment.weapon?.id || null;
+  const aEq = state.equipment.armor?.id || null;
 
-  if (a === "openProfileView") openProfileView(btn.dataset.view);
+  const weaponsHTML = state.gear.weapons.length
+    ? `<div class="list">${state.gear.weapons.map((w,i)=>`
+        <div class="row">
+          <div class="row__left">
+            <div class="row__title">${w.name}</div>
+            <div class="row__sub">ATK +${w.atk}${w.rarity === "gold" ? " · GOLD" : w.rarity === "blackmarket" ? " · Black Market" : ""}</div>
+          </div>
+          <div class="row__right">
+            ${w.id === wEq ? `<span class="tag">Equipped</span>` : ""}
+            <button class="btn btn--small btn--secondary" data-action="equipWeapon" data-idx="${i}">Equip</button>
+          </div>
+        </div>
+      `).join("")}</div>`
+    : `<div class="muted">No weapons yet.</div>`;
 
-  if (a === "doCrime") doCrime(btn.dataset.crime);
-  if (a === "doFight") doFight(btn.dataset.kind, btn.dataset.fight);
-  if (a === "doGym") doGym(btn.dataset.stat);
+  const armorHTML = state.gear.armor.length
+    ? `<div class="list">${state.gear.armor.map((a,i)=>`
+        <div class="row">
+          <div class="row__left">
+            <div class="row__title">${a.name}</div>
+            <div class="row__sub">DEF +${a.def}</div>
+          </div>
+          <div class="row__right">
+            ${a.id === aEq ? `<span class="tag">Equipped</span>` : ""}
+            <button class="btn btn--small btn--secondary" data-action="equipArmor" data-idx="${i}">Equip</button>
+          </div>
+        </div>
+      `).join("")}</div>`
+    : `<div class="muted">No armor yet.</div>`;
 
-  // MISSIONS
-  if (a === "doMission") doMission(btn.dataset.mission);
+  profileGearBox.innerHTML = `
+    <div class="section-title">Weapons</div>
+    ${weaponsHTML}
+    <div class="section-title">Armor</div>
+    ${armorHTML}
+  `;
+}
 
-  if (a === "buyShop") buyShopItem(btn.dataset.kind, btn.dataset.item);
-  if (a === "useInv") invUse(btn.dataset.item);
-
-  if (a === "buyArms") buyArms(btn.dataset.kind, btn.dataset.item);
-  if (a === "buyBM") buyArms("weapon", null, "blackmarket");
-  if (a === "equipWeapon") equipWeaponByIndex(+btn.dataset.idx);
-  if (a === "equipArmor") equipArmorByIndex(+btn.dataset.idx);
-
-  if (a === "buyProperty") buyProperty(btn.dataset.prop);
-  if (a === "upgradeProperty") upgradeProperty(btn.dataset.prop);
-
-  if (a === "hardReset" && confirm("Reset all progress?")) {
-    localStorage.removeItem(SAVE_KEY);
-    location.reload();
-  }
-
-  save();
-  render();
-});
+function renderProfileProps() {
+  const owned = PROPERTIES.filter(p => isPropertyOwned(p.id));
+  profilePropsBox.innerHTML = owned.length
+    ? `<div class="list">${owned.map(p=>`
+        <div class="row">
+          <div class="row__left">
+            <div class="row__title">${p.name}</div>
+            <div class="row__sub">Level ${getOwnedPropertyLevel(p.id)} · ${fmtMoney(p.baseIncomePerHour * getOwnedPropertyLevel(p.id))}/hr</div>
+          </div>
+        </div>
+      `).join("")}</div>`
+    : `<div class="muted">No properties owned.</div>`;
+}
 
 /* =====================
    MAIN RENDER LOOP
@@ -1764,7 +1622,7 @@ function render() {
   updateTitle();
 
   renderHUD();
-  renderProfileTop();
+  renderProfile();
 
   renderCrimesPage();
   renderFightsPage();
@@ -1778,19 +1636,23 @@ function render() {
   renderProfileGear();
   renderProfileProps();
 
-  // In jail only Profile tab works
+  // ✅ NAV DISABLE RULES (Fixed)
+  // - In jail: only Profile works
+  // - KO: block crimes/fights/gym/missions, but keep shop/arms/properties/profile usable
   navButtons.forEach(btn => {
+    const route = btn.dataset.route;
+
     if (isJailed()) {
-      btn.disabled = btn.dataset.route !== "profile";
+      btn.disabled = route !== "profile";
       return;
     }
-    if (btn.dataset.route === "crimes" || btn.dataset.route === "fights" || btn.dataset.route === "missions") {
-      btn.disabled = isKO();
-    } else if (btn.dataset.route === "gym") {
-      btn.disabled = isKO();
-    } else {
-      btn.disabled = false;
+
+    if (isKO()) {
+      btn.disabled = (route === "crimes" || route === "fights" || route === "gym" || route === "missions");
+      return;
     }
+
+    btn.disabled = false;
   });
 
   showPage(state.ui.page);
