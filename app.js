@@ -1166,7 +1166,280 @@ function updateTitle() {
     }
   }
 }
+/* =====================
+   DOM REFERENCES (RESTORE)
+===================== */
 
+const hudMoney = document.getElementById("hudMoney");
+const hudLevel = document.getElementById("hudLevel");
+const hudTitle = document.getElementById("hudTitle");
+
+const profileAvatar = document.getElementById("profileAvatar");
+const profileName = document.getElementById("profileName");
+const profileTitleBadge = document.getElementById("profileTitleBadge");
+const profileSpecBadge = document.getElementById("profileSpecBadge");
+
+const xpText = document.getElementById("xpText");
+const xpBar = document.getElementById("xpBar");
+const energyText = document.getElementById("energyText");
+const energyBar = document.getElementById("energyBar");
+const healthText = document.getElementById("healthText");
+const healthBar = document.getElementById("healthBar");
+
+const statLevel = document.getElementById("statLevel");
+const statAtk = document.getElementById("statAtk");
+const statDef = document.getElementById("statDef");
+const statIncome = document.getElementById("statIncome");
+const statJail = document.getElementById("statJail");
+const statKO = document.getElementById("statKO");
+
+const activityLog = document.getElementById("activityLog");
+
+const pageCrimes = document.getElementById("page-crimes");
+const pageFights = document.getElementById("page-fights");
+const pageGym = document.getElementById("page-gym");
+const pageShop = document.getElementById("page-shop");
+const pageArms = document.getElementById("page-arms");
+const pageProperties = document.getElementById("page-properties");
+const pageMissions = document.getElementById("page-missions");
+
+const profileInventoryBox = document.getElementById("profileInventory");
+const profileGearBox = document.getElementById("profileGear");
+const profilePropsBox = document.getElementById("profileProps");
+
+/* =====================
+   HUD RENDER (RESTORE)
+===================== */
+
+function renderHUD() {
+  if (hudMoney) hudMoney.textContent = fmtMoney(state.player.money);
+  if (hudLevel) hudLevel.textContent = `Lv ${state.player.level}`;
+  if (hudTitle) hudTitle.textContent = state.player.title;
+}
+
+/* =====================
+   PAGE RENDERS (RESTORE)
+   (NO button visual changes)
+===================== */
+
+function renderCrimesPage() {
+  if (!pageCrimes) return;
+
+  const jailed = isJailed();
+  const ko = isKO();
+
+  pageCrimes.innerHTML = `
+    <div class="card">
+      <div class="section-title">Crimes</div>
+      <div class="muted">Spend energy to commit crimes.</div>
+      <div class="hr"></div>
+      <div class="muted">Status: ${jailed ? "🚔 In Jail" : ko ? "💫 KO" : "✅ Free"}</div>
+    </div>
+
+    <div class="card" style="margin-top:12px;">
+      <div class="list">
+        ${CRIMES.map(c => {
+          const locked = state.player.level < c.unlock;
+          const disabled = jailed || ko || locked || state.player.energy < c.energy;
+
+          return `
+            <div class="row">
+              <div class="row__left">
+                <div class="row__title">${c.name}</div>
+                <div class="row__sub">
+                  +$${c.money[0]}–$${c.money[1]} • +${c.xp} XP •
+                  Success ${pct(c.success)}% • Jail ${pct(c.jail)}%
+                </div>
+              </div>
+              <div class="row__right">
+                ${locked ? `<span class="tag">Unlock Lv ${c.unlock}</span>` : `<span class="tag">Energy ${c.energy}</span>`}
+                <button class="btn btn--small btn--primary"
+                  data-action="doCrime"
+                  data-crime="${c.id}"
+                  ${disabled ? "disabled" : ""}>
+                  Do
+                </button>
+              </div>
+            </div>
+          `;
+        }).join("")}
+      </div>
+    </div>
+  `;
+}
+
+function renderFightsPage() {
+  if (!pageFights) return;
+
+  const jailed = isJailed();
+  const ko = isKO();
+
+  pageFights.innerHTML = `
+    <div class="card">
+      <div class="section-title">Fights</div>
+      <div class="muted">Enemies and Rivals.</div>
+    </div>
+
+    <div class="card" style="margin-top:12px;">
+      <div class="section-title" style="margin-top:0;">Enemies</div>
+      <div class="list">
+        ${ENEMIES.map(e => {
+          const locked = state.player.level < e.unlock;
+          const disabled = jailed || ko || locked || state.player.energy < e.energy;
+
+          return `
+            <div class="row">
+              <div class="row__left">
+                <div class="row__title">${e.name}</div>
+                <div class="row__sub">+$${e.money[0]}–$${e.money[1]} • +${e.xp} XP</div>
+              </div>
+              <div class="row__right">
+                ${locked ? `<span class="tag">Unlock Lv ${e.unlock}</span>` : `<span class="tag">Energy ${e.energy}</span>`}
+                <button class="btn btn--small btn--primary"
+                  data-action="doFight"
+                  data-kind="enemy"
+                  data-fight="${e.id}"
+                  ${disabled ? "disabled" : ""}>
+                  Fight
+                </button>
+              </div>
+            </div>
+          `;
+        }).join("")}
+      </div>
+    </div>
+
+    <div class="card" style="margin-top:12px;">
+      <div class="section-title" style="margin-top:0;">Rivals</div>
+      <div class="list">
+        ${RIVALS.map(r => {
+          const locked = state.player.level < r.unlock;
+          const disabled = jailed || ko || locked || state.player.energy < r.energy;
+
+          return `
+            <div class="row">
+              <div class="row__left">
+                <div class="row__title">${r.name}</div>
+                <div class="row__sub">+$${r.money[0]}–$${r.money[1]} • +${r.xp} XP</div>
+              </div>
+              <div class="row__right">
+                ${locked ? `<span class="tag">Unlock Lv ${r.unlock}</span>` : `<span class="tag">Energy ${r.energy}</span>`}
+                <button class="btn btn--small btn--primary"
+                  data-action="doFight"
+                  data-kind="rival"
+                  data-fight="${r.id}"
+                  ${disabled ? "disabled" : ""}>
+                  Fight
+                </button>
+              </div>
+            </div>
+          `;
+        }).join("")}
+      </div>
+    </div>
+  `;
+}
+
+function renderGymPage() {
+  if (!pageGym) return;
+
+  const jailed = isJailed();
+  const ko = isKO();
+  const gym = jailed ? GYM.jail : GYM.normal;
+  const bonus = propertyTrainingBonus();
+
+  pageGym.innerHTML = `
+    <div class="card">
+      <div class="section-title">${gym.name}</div>
+      <div class="muted">Cost: ${gym.energy} Energy • Success ${pct(clamp(gym.success + bonus, 0, 1))}%</div>
+    </div>
+
+    <div class="card" style="margin-top:12px;">
+      <div class="grid grid--2">
+        <button class="btn btn--primary"
+          data-action="doGym"
+          data-stat="attack"
+          ${ko || state.player.energy < gym.energy ? "disabled" : ""}>
+          Train Attack
+        </button>
+        <button class="btn btn--success"
+          data-action="doGym"
+          data-stat="defense"
+          ${ko || state.player.energy < gym.energy ? "disabled" : ""}>
+          Train Defense
+        </button>
+      </div>
+    </div>
+  `;
+}
+
+function renderMissionsPage() {
+  if (!pageMissions) return;
+
+  const jailed = isJailed();
+  const ko = isKO();
+
+  pageMissions.innerHTML = `
+    <div class="card">
+      <div class="section-title">Missions</div>
+      <div class="muted">
+        Mission lines progress step-by-step.
+        ${jailed ? "<br><b>🚔 No missions while jailed.</b>" : ""}
+      </div>
+    </div>
+
+    ${MISSION_LINES.map(line => {
+      const currentIdx = getCurrentStepIndex(line.lineId);
+      const step = line.steps[currentIdx];
+
+      const onCd = isMissionOnCooldown(step.id);
+      const cdLeft = Math.max(0, missionCooldownEndsAt(step.id) - Date.now());
+
+      const disabled =
+        jailed || ko || state.player.level < line.unlock ||
+        onCd || state.player.energy < step.energy;
+
+      return `
+        <div class="card" style="margin-top:12px;">
+          <div class="section-title">${line.name}</div>
+          <div class="muted">Step ${currentIdx + 1} of ${line.steps.length}</div>
+          <div class="hr"></div>
+
+          <div class="row">
+            <div class="row__left">
+              <div class="row__title">${step.name}</div>
+              <div class="row__sub">
+                ${step.flavor || ""}<br>
+                +$${step.money[0]}–$${step.money[1]} • +${step.xp} XP
+              </div>
+            </div>
+            <div class="row__right">
+              <span class="tag">Energy ${step.energy}</span>
+              <span class="tag">${step.cooldownMin}m CD</span>
+              ${onCd ? `<span class="tag">⏳ ${msToClock(cdLeft)}</span>` : ``}
+              <button class="btn btn--small btn--primary"
+                data-action="doMission"
+                data-mission="${step.id}"
+                ${disabled ? "disabled" : ""}>
+                Run
+              </button>
+            </div>
+          </div>
+        </div>
+      `;
+    }).join("")}
+  `;
+}
+
+/* =====================
+   SAFER PROFILE RENDER (prevents crash if any id missing)
+===================== */
+
+const _renderProfileOriginal = renderProfile;
+renderProfile = function () {
+  if (!profileAvatar || !profileName || !profileTitleBadge) return;
+  _renderProfileOriginal();
+};
 /* =====================
    (PART 3 END)
 ===================== */
