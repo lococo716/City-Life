@@ -1333,14 +1333,16 @@ const profileInventoryBox = document.getElementById("profileInventory");
 const profileGearBox = document.getElementById("profileGear");
 const profilePropsBox = document.getElementById("profileProps");
 // NEW: TOP HUD METERS
-const hudXpText = document.getElementById("hudXpText");
-const hudXpBar = document.getElementById("hudXpBar");
+// NEW: TOP HUD METERS (duplicate refs kept, renamed to avoid const crash)
+const hudXpText2 = document.getElementById("hudXpText");
+const hudXpBar2  = document.getElementById("hudXpBar");
 
-const hudEnergyText = document.getElementById("hudEnergyText");
-const hudEnergyBar = document.getElementById("hudEnergyBar");
+const hudEnergyText2 = document.getElementById("hudEnergyText");
+const hudEnergyBar2  = document.getElementById("hudEnergyBar");
 
-const hudHealthText = document.getElementById("hudHealthText");
-const hudHealthBar = document.getElementById("hudHealthBar");
+const hudHealthText2 = document.getElementById("hudHealthText");
+const hudHealthBar2  = document.getElementById("hudHealthBar");
+
 
 // NEW: QUICK USE POPUP
 const quickUse = document.getElementById("quickUse");
