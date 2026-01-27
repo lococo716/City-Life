@@ -620,3 +620,29 @@ body{
   opacity: 0.45;
   cursor: not-allowed;
 }
+/* AUTH OVERLAY (login/create) - new classes only */
+.auth {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.60);
+  display: grid;
+  place-items: center;
+  z-index: 10000;
+  padding: 18px;
+}
+.auth__panel {
+  width: min(520px, 95vw);
+}
+.auth input {
+  width: 100%;
+  padding: 12px 12px;
+  border-radius: 12px;
+  border: 1px solid rgba(255,255,255,0.12);
+  background: rgba(18,27,46,0.65);
+  color: var(--text);
+  outline: none;
+}
+.auth input:focus {
+  border-color: rgba(58,167,255,.45);
+}
+.auth[hidden] { display: none !important; }
