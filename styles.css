@@ -375,3 +375,142 @@ body{
 }
 .tag--gold{ border-color: rgba(247,201,72,.35); color: rgba(247,201,72,.95); background: rgba(247,201,72,.08); }
 
+/* =========================
+   PATCH 2: TOP HUD METERS + QUICK USE POPUP
+   (paste at bottom of styles.css)
+========================= */
+
+/* Make room in header + keep HUD tidy */
+.hud {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+/* Container for the 3 small bars */
+.hud-meters {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  flex-wrap: wrap;
+  margin-left: 8px;
+}
+
+/* Each small meter */
+.hud-meter {
+  min-width: 150px;
+  max-width: 190px;
+  padding: 8px 10px;
+  border-radius: 12px;
+  background: rgba(255,255,255,0.06);
+  border: 1px solid rgba(255,255,255,0.10);
+}
+
+/* Top line (label + numbers + plus) */
+.hud-meter__top {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  justify-content: space-between;
+  font-size: 12px;
+  opacity: 0.95;
+  margin-bottom: 6px;
+}
+
+.hud-meter__label {
+  font-weight: 700;
+  letter-spacing: 0.2px;
+}
+
+.hud-meter__text {
+  opacity: 0.9;
+  font-variant-numeric: tabular-nums;
+  margin-left: auto;
+}
+
+/* Small bar */
+.hud-bar {
+  height: 8px;
+  border-radius: 999px;
+  background: rgba(255,255,255,0.12);
+  overflow: hidden;
+}
+
+.hud-bar__fill {
+  height: 100%;
+  width: 0%;
+  border-radius: 999px;
+  background: rgba(255,255,255,0.75);
+  transition: width 160ms linear;
+}
+
+/* Energy + Health variants (slight tint) */
+.hud-bar--energy .hud-bar__fill {
+  background: rgba(120, 220, 255, 0.85);
+}
+.hud-bar--health .hud-bar__fill {
+  background: rgba(255, 120, 120, 0.85);
+}
+
+/* Plus button */
+.hud-plus {
+  width: 24px;
+  height: 24px;
+  border-radius: 8px;
+  border: 1px solid rgba(255,255,255,0.18);
+  background: rgba(255,255,255,0.08);
+  color: inherit;
+  cursor: pointer;
+  line-height: 1;
+  font-size: 16px;
+  display: grid;
+  place-items: center;
+  flex: 0 0 auto;
+}
+
+.hud-plus:hover {
+  background: rgba(255,255,255,0.14);
+}
+
+/* =========================
+   QUICK USE POPUP
+========================= */
+
+.quickuse {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.55);
+  display: grid;
+  place-items: center;
+  z-index: 9999;
+  padding: 18px;
+}
+
+.quickuse__panel {
+  width: min(520px, 95vw);
+  max-height: 75vh;
+  overflow: auto;
+  border-radius: 16px;
+  background: rgba(20,20,22,0.96);
+  border: 1px solid rgba(255,255,255,0.14);
+  box-shadow: 0 18px 60px rgba(0,0,0,0.45);
+  padding: 14px;
+}
+
+.quickuse__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 10px;
+}
+
+.quickuse__title {
+  font-weight: 800;
+  letter-spacing: 0.2px;
+}
+
+.quickuse__body .row {
+  margin-top: 8px;
+}
