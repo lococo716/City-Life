@@ -1388,22 +1388,6 @@ function renderHUD() {
   if (hudHealthBar) hudHealthBar.style.width = `${clamp((state.player.health / state.player.maxHealth) * 100, 0, 100)}%`;
 }
 
-  // TOP HUD METERS
-  const xpNeed = xpNeededForLevel(state.player.level);
-  const xpPct = xpNeed > 0 ? (state.player.xp / xpNeed) * 100 : 0;
-
-  if (hudXpText) hudXpText.textContent = `${state.player.xp} / ${xpNeed}`;
-  if (hudXpBar) hudXpBar.style.width = `${clamp(xpPct, 0, 100)}%`;
-
-  const ePct = state.player.maxEnergy > 0 ? (state.player.energy / state.player.maxEnergy) * 100 : 0;
-  if (hudEnergyText) hudEnergyText.textContent = `${state.player.energy}/${state.player.maxEnergy}`;
-  if (hudEnergyBar) hudEnergyBar.style.width = `${clamp(ePct, 0, 100)}%`;
-
-  const hPct = state.player.maxHealth > 0 ? (state.player.health / state.player.maxHealth) * 100 : 0;
-  if (hudHealthText) hudHealthText.textContent = `${state.player.health}/${state.player.maxHealth}`;
-  if (hudHealthBar) hudHealthBar.style.width = `${clamp(hPct, 0, 100)}%`;
-}
-
 
 /* =====================
    PAGE RENDERS (RESTORE)
@@ -1619,15 +1603,6 @@ function renderMissionsPage() {
   `;
 }
 
-/* =====================
-   SAFER PROFILE RENDER (prevents crash if any id missing)
-===================== */
-
-const _renderProfileOriginal = renderProfile;
-renderProfile = function () {
-  if (!profileAvatar || !profileName || !profileTitleBadge) return;
-  _renderProfileOriginal();
-};
 /* =====================
    (PART 3 END)
 ===================== */
