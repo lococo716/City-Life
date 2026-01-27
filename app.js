@@ -505,6 +505,83 @@ function invUse(itemId) {
   addLog(`Used ${it.name}`);
   toast("Item used");
 }
+/* =====================
+   QUICK USE POPUP (TOP HUD +)
+===================== */
+
+let quickUseKind = null; // "energy" | "healing"
+
+function openQuickUse(kind) {
+  if (!quickUse || !quickUseTitle || !quickUseBody) return;
+
+  quickUseKind = kind;
+
+  quickUseTitle.textContent =
+    kind === "energy" ? "Use Energy Items" : "Use Healing Items";
+
+  renderQuickUseList();
+  quickUse.hidden = false;
+}
+
+function closeQuickUse() {
+  if (!quickUse) return;
+  quickUse.hidden = true;
+  quickUseKind = null;
+}
+
+function getQuickUseItems() {
+  const items = Object.values(state.inventory || {});
+  if (quickUseKind === "energy") {
+    return items.filter(it => (it.energy || 0) > 0 && it.quantity > 0);
+  }
+  if (quickUseKind === "healing") {
+    return items.filter(it => (it.health || 0) > 0 && it.quantity > 0);
+  }
+  return [];
+}
+
+function renderQuickUseList() {
+  if (!quickUseBody) return;
+
+  const items = getQuickUseItems();
+
+  if (!items.length) {
+    quickUseBody.innerHTML = `<div class="muted">No items available.</div>`;
+    return;
+  }
+
+  quickUseBody.innerHTML = `
+    <div class="list">
+      ${items.map(it => `
+        <div class="row">
+          <div class="row__left">
+            <div class="row__title">${it.name} ×${it.quantity}</div>
+            <div class="row__sub">
+              ${quickUseKind === "energy" ? `+${it.energy} Energy` : `+${it.health} Health`}
+            </div>
+          </div>
+          <div class="row__right">
+            <button class="btn btn--small btn--primary"
+              data-action="quickUseItem"
+              data-item="${it.id}">
+              Use
+            </button>
+          </div>
+        </div>
+      `).join("")}
+    </div>
+  `;
+}
+
+function quickUseItem(itemId) {
+  invUse(itemId);
+
+  // refresh the popup list (and auto-close if empty)
+  if (quickUseKind) {
+    renderQuickUseList();
+    if (!getQuickUseItems().length) closeQuickUse();
+  }
+}
 
 /* =====================
    SHOP BUY
@@ -1206,6 +1283,20 @@ const pageMissions = document.getElementById("page-missions");
 const profileInventoryBox = document.getElementById("profileInventory");
 const profileGearBox = document.getElementById("profileGear");
 const profilePropsBox = document.getElementById("profileProps");
+// NEW: TOP HUD METERS
+const hudXpText = document.getElementById("hudXpText");
+const hudXpBar = document.getElementById("hudXpBar");
+
+const hudEnergyText = document.getElementById("hudEnergyText");
+const hudEnergyBar = document.getElementById("hudEnergyBar");
+
+const hudHealthText = document.getElementById("hudHealthText");
+const hudHealthBar = document.getElementById("hudHealthBar");
+
+// NEW: QUICK USE POPUP
+const quickUse = document.getElementById("quickUse");
+const quickUseTitle = document.getElementById("quickUseTitle");
+const quickUseBody = document.getElementById("quickUseBody");
 
 /* =====================
    HUD RENDER (RESTORE)
@@ -1215,7 +1306,23 @@ function renderHUD() {
   if (hudMoney) hudMoney.textContent = fmtMoney(state.player.money);
   if (hudLevel) hudLevel.textContent = `Lv ${state.player.level}`;
   if (hudTitle) hudTitle.textContent = state.player.title;
+
+  // TOP HUD METERS
+  const xpNeed = xpNeededForLevel(state.player.level);
+  const xpPct = xpNeed > 0 ? (state.player.xp / xpNeed) * 100 : 0;
+
+  if (hudXpText) hudXpText.textContent = `${state.player.xp} / ${xpNeed}`;
+  if (hudXpBar) hudXpBar.style.width = `${clamp(xpPct, 0, 100)}%`;
+
+  const ePct = state.player.maxEnergy > 0 ? (state.player.energy / state.player.maxEnergy) * 100 : 0;
+  if (hudEnergyText) hudEnergyText.textContent = `${state.player.energy}/${state.player.maxEnergy}`;
+  if (hudEnergyBar) hudEnergyBar.style.width = `${clamp(ePct, 0, 100)}%`;
+
+  const hPct = state.player.maxHealth > 0 ? (state.player.health / state.player.maxHealth) * 100 : 0;
+  if (hudHealthText) hudHealthText.textContent = `${state.player.health}/${state.player.maxHealth}`;
+  if (hudHealthBar) hudHealthBar.style.width = `${clamp(hPct, 0, 100)}%`;
 }
+
 
 /* =====================
    PAGE RENDERS (RESTORE)
@@ -1953,6 +2060,10 @@ document.body.addEventListener("click", e => {
   if (!btn) return;
 
   const a = btn.dataset.action;
+  // QUICK USE (TOP HUD)
+  if (a === "openQuickUse") openQuickUse(btn.dataset.kind);
+  if (a === "closeQuickUse") closeQuickUse();
+  if (a === "quickUseItem") quickUseItem(btn.dataset.item);
 
   if (a === "openProfileView") openProfileView(btn.dataset.view);
 
