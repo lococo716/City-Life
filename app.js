@@ -1250,6 +1250,16 @@ function updateTitle() {
 const hudMoney = document.getElementById("hudMoney");
 const hudLevel = document.getElementById("hudLevel");
 const hudTitle = document.getElementById("hudTitle");
+// PATCH 4: Top HUD meters
+const hudXpText = document.getElementById("hudXpText");
+const hudXpBar  = document.getElementById("hudXpBar");
+
+const hudEnergyText = document.getElementById("hudEnergyText");
+const hudEnergyBar  = document.getElementById("hudEnergyBar");
+
+const hudHealthText = document.getElementById("hudHealthText");
+const hudHealthBar  = document.getElementById("hudHealthBar");
+
 
 const profileAvatar = document.getElementById("profileAvatar");
 const profileName = document.getElementById("profileName");
@@ -1306,6 +1316,19 @@ function renderHUD() {
   if (hudMoney) hudMoney.textContent = fmtMoney(state.player.money);
   if (hudLevel) hudLevel.textContent = `Lv ${state.player.level}`;
   if (hudTitle) hudTitle.textContent = state.player.title;
+
+  // PATCH 4: keep top HUD bars synced + smooth animated fills
+  const xpNeed = xpNeededForLevel(state.player.level);
+
+  if (hudXpText) hudXpText.textContent = `${state.player.xp} / ${xpNeed}`;
+  if (hudXpBar) hudXpBar.style.width = `${clamp((state.player.xp / xpNeed) * 100, 0, 100)}%`;
+
+  if (hudEnergyText) hudEnergyText.textContent = `${state.player.energy}/${state.player.maxEnergy}`;
+  if (hudEnergyBar) hudEnergyBar.style.width = `${clamp((state.player.energy / state.player.maxEnergy) * 100, 0, 100)}%`;
+
+  if (hudHealthText) hudHealthText.textContent = `${state.player.health}/${state.player.maxHealth}`;
+  if (hudHealthBar) hudHealthBar.style.width = `${clamp((state.player.health / state.player.maxHealth) * 100, 0, 100)}%`;
+}
 
   // TOP HUD METERS
   const xpNeed = xpNeededForLevel(state.player.level);
