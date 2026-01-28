@@ -653,6 +653,33 @@ function buyShopItem(kind, itemId) {
 
   addLog(`🛒 Bought ${item.name} for $${item.price}`);
   toast("Purchased");
+} 
+
+
+function adminAddMoney() {
+  state.player.money += 10000;
+  addLog("🛠️ Admin: +$10,000");
+  toast("Admin money added");
+}
+
+function adminAddXP() {
+  state.player.xp += 500;
+  tryLevelUp();
+  addLog("🛠️ Admin: +500 XP");
+  toast("Admin XP added");
+}
+
+function adminRefill() {
+  state.player.energy = state.player.maxEnergy;
+  state.player.health = state.player.maxHealth;
+  addLog("🛠️ Admin: Energy & Health refilled");
+  toast("Admin refill");
+}
+
+function adminClearJail() {
+  state.timers.jailUntil = null;
+  addLog("🛠️ Admin: Jail cleared");
+  toast("Jail cleared");
 }
 
 /* =====================
@@ -1348,6 +1375,8 @@ const hudEnergyBar2  = document.getElementById("hudEnergyBar");
 
 const hudHealthText2 = document.getElementById("hudHealthText");
 const hudHealthBar2  = document.getElementById("hudHealthBar");
+
+const adminPanel = document.getElementById("adminPanel");
 
 
 // NEW: QUICK USE POPUP
@@ -2067,6 +2096,9 @@ function renderProfile() {
   profileName.textContent = state.player.name;
   profileTitleBadge.textContent = state.player.title;
   if (profileSpecBadge) profileSpecBadge.textContent = "No Specialization";
+  if (adminPanel) {
+  adminPanel.hidden = !isAdmin();
+}
 
   const xpNeed = xpNeededForLevel(state.player.level);
   xpText.textContent = `${state.player.xp} / ${xpNeed}`;
@@ -2210,6 +2242,12 @@ document.body.addEventListener("click", e => {
     localStorage.removeItem(SAVE_KEY);
     location.reload();
   }
+ if (!isAdmin()) return;
+
+ if (a === "adminMoney") adminAddMoney();
+ if (a === "adminXP") adminAddXP();
+ if (a === "adminRefill") adminRefill();
+ if (a === "adminClearJail") adminClearJail();
 
   save();
   render();
