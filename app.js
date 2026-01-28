@@ -51,6 +51,7 @@ function loadAccounts() {
 function saveAccounts(obj) {
   localStorage.setItem(ACCOUNTS_KEY, JSON.stringify(obj));
 }
+const Admin123 = "admin"; // change if you want
 
 
 const MS = {
@@ -108,6 +109,9 @@ function msToClock(ms) {
   const m = Math.floor(totalSec / 60);
   const s = totalSec % 60;
   return `${m}:${String(s).padStart(2, "0")}`;
+}
+function isAdmin() {
+  return currentUser === Admin123;
 }
 
 /* =====================
@@ -2136,9 +2140,11 @@ async function login() {
   const p = (authPass?.value || "").trim();
   if (!u || !p) return openAuth("Enter username + password.");
 
-  const accounts = loadAccounts();
-  const rec = accounts[u];
-  if (!rec) return openAuth("Account not found.");
+ accounts[u] = {
+  passHash,
+  createdAt: Date.now(),
+  isAdmin: u === Admin123,
+};
 
   const passHash = await sha256Hex(p);
   if (passHash !== rec.passHash) return openAuth("Wrong password.");
