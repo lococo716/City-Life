@@ -99,172 +99,173 @@
       <section class="page" id="page-properties" data-page="properties" hidden></section>
       <section class="page" id="page-missions" data-page="missions" hidden></section>
 
-      <!-- PROFILE "SEPARATE PAGE" + SUBPAGES -->
-      <section class="page page--profile" id="page-profile" data-page="profile" hidden>
-        <div class="profile-shell">
-          <div class="profile-header card card--premium">
-            <div class="profile-id">
-              <div class="avatar" id="profileAvatar">🙂</div>
-              <div class="profile-id__meta">
-                <div class="profile-id__name" id="profileName">Player</div>
-                <div class="profile-id__badges">
-                  <span class="badge" id="profileTitleBadge">Street Rat</span>
-                  <span class="badge badge--outline" id="profileSpecBadge">Specialization</span>
-                </div>
-              </div>
-              <button class="btn btn--secondary btn--small" data-action="changeAvatar">Change Emoji</button>
-            </div>
-            
-         <div class="stat">
-           <div class="stat__label">💎 Gems</div>
-           <div class="stat__value" id="statGems">0</div>
+     <!-- PROFILE "SEPARATE PAGE" + SUBPAGES -->
+<section class="page page--profile" id="page-profile" data-page="profile" hidden>
+  <div class="profile-shell">
+    <div class="profile-header card card--premium">
+      <div class="profile-id">
+        <div class="avatar" id="profileAvatar">🙂</div>
+        <div class="profile-id__meta">
+          <div class="profile-id__name" id="profileName">Player</div>
+          <div class="profile-id__badges">
+            <span class="badge" id="profileTitleBadge">Street Rat</span>
+            <span class="badge badge--outline" id="profileSpecBadge">Specialization</span>
+          </div>
+        </div>
+        <button class="btn btn--secondary btn--small" data-action="changeAvatar">Change Emoji</button>
+      </div>
+
+      <div class="stat">
+        <div class="stat__label">💎 Gems</div>
+        <div class="stat__value" id="statGems">0</div>
+      </div>
+
+      <div class="meters">
+        <div class="meter">
+          <div class="meter__top">
+            <span>XP</span>
+            <span id="xpText">0 / 100</span>
+          </div>
+          <div class="bar"><div class="bar__fill" id="xpBar"></div></div>
         </div>
 
-            <div class="meters">
-              <div class="meter">
-                <div class="meter__top">
-                  <span>XP</span>
-                  <span id="xpText">0 / 100</span>
-                </div>
-                <div class="bar"><div class="bar__fill" id="xpBar"></div></div>
-              </div>
-
-              <div class="meter">
-                <div class="meter__top">
-                  <span>Energy</span>
-                  <span id="energyText">0/0</span>
-                </div>
-                <div class="bar bar--energy"><div class="bar__fill" id="energyBar"></div></div>
-              </div>
-
-              <div class="meter">
-                <div class="meter__top">
-                  <span>Health</span>
-                  <span id="healthText">0/0</span>
-                </div>
-                <div class="bar bar--health"><div class="bar__fill" id="healthBar"></div></div>
-              </div>
-            </div>
-
-            <div class="stat-grid">
-              <div class="stat">
-                <div class="stat__label">Level</div>
-                <div class="stat__value" id="statLevel">1</div>
-              </div>
-              <div class="stat">
-                <div class="stat__label">Attack</div>
-                <div class="stat__value" id="statAtk">0</div>
-              </div>
-              <div class="stat">
-                <div class="stat__label">Defense</div>
-                <div class="stat__value" id="statDef">0</div>
-              </div>
-              <div class="stat">
-                <div class="stat__label">Passive Income</div>
-                <div class="stat__value" id="statIncome">$0/hr</div>
-              </div>
-              <div class="stat">
-                <div class="stat__label">Jail</div>
-                <div class="stat__value" id="statJail">No</div>
-              </div>
-              <div class="stat">
-                <div class="stat__label">KO</div>
-                <div class="stat__value" id="statKO">No</div>
-              </div>
-            </div>
+        <div class="meter">
+          <div class="meter__top">
+            <span>Energy</span>
+            <span id="energyText">0/0</span>
           </div>
+          <div class="bar bar--energy"><div class="bar__fill" id="energyBar"></div></div>
+        </div>
 
-          <div class="profile-body">
-            <section class="profile-view" id="profileView-overview" data-profile-view="overview">
-              <div class="section-title">My Stuff</div>
-              <div class="hub-grid">
-                <button class="card hub-card" data-action="openProfileView" data-view="inventory">
-                  <div class="hub-card__title">🎒 Inventory</div>
-                  <div class="hub-card__text">Food, healing, and items you own.</div>
-                </button>
-                <button class="card hub-card" data-action="openProfileView" data-view="gear">
-                  <div class="hub-card__title">🗡️ Weapons & Armor</div>
-                  <div class="hub-card__text">View purchases and equip gear.</div>
-                </button>
-                <button class="card hub-card" data-action="openProfileView" data-view="props">
-                  <div class="hub-card__title">🏠 Properties</div>
-                  <div class="hub-card__text">Owned buildings, income, and upgrades.</div>
-                </button>
-              </div>
-
-              <div class="section-title">Recent Activity</div>
-              <div class="card log" id="activityLog"></div>
-            </section>
-
-            <section class="profile-view" id="profileView-inventory" data-profile-view="inventory" hidden>
-              <div class="subhead">
-                <button class="btn btn--secondary btn--small" data-action="openProfileView" data-view="overview">← Back</button>
-                <div class="subhead__title">Inventory</div>
-              </div>
-              <div class="card" id="profileInventory"></div>
-            </section>
-
-            <section class="profile-view" id="profileView-gear" data-profile-view="gear" hidden>
-              <div class="subhead">
-                <button class="btn btn--secondary btn--small" data-action="openProfileView" data-view="overview">← Back</button>
-                <div class="subhead__title">Weapons & Armor</div>
-              </div>
-              <div class="card" id="profileGear"></div>
-            </section>
-
-            <section class="profile-view" id="profileView-props" data-profile-view="props" hidden>
-              <div class="subhead">
-                <button class="btn btn--secondary btn--small" data-action="openProfileView" data-view="overview">← Back</button>
-                <div class="subhead__title">Properties</div>
-              </div>
-              <div class="card" id="profileProps"></div>
-              <div class="hint">Offline property income is capped at <b>4 hours</b>.</div>
-            </section>
+        <div class="meter">
+          <div class="meter__top">
+            <span>Health</span>
+            <span id="healthText">0/0</span>
           </div>
+          <div class="bar bar--health"><div class="bar__fill" id="healthBar"></div></div>
+        </div>
+      </div>
+
+      <div class="stat-grid">
+        <div class="stat">
+          <div class="stat__label">Level</div>
+          <div class="stat__value" id="statLevel">1</div>
+        </div>
+        <div class="stat">
+          <div class="stat__label">Attack</div>
+          <div class="stat__value" id="statAtk">0</div>
+        </div>
+        <div class="stat">
+          <div class="stat__label">Defense</div>
+          <div class="stat__value" id="statDef">0</div>
+        </div>
+        <div class="stat">
+          <div class="stat__label">Passive Income</div>
+          <div class="stat__value" id="statIncome">$0/hr</div>
+        </div>
+        <div class="stat">
+          <div class="stat__label">Jail</div>
+          <div class="stat__value" id="statJail">No</div>
+        </div>
+        <div class="stat">
+          <div class="stat__label">KO</div>
+          <div class="stat__value" id="statKO">No</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="profile-body">
+      <section class="profile-view" id="profileView-overview" data-profile-view="overview">
+        <div class="section-title">My Stuff</div>
+        <div class="hub-grid">
+          <button class="card hub-card" data-action="openProfileView" data-view="inventory">
+            <div class="hub-card__title">🎒 Inventory</div>
+            <div class="hub-card__text">Food, healing, and items you own.</div>
+          </button>
+          <button class="card hub-card" data-action="openProfileView" data-view="gear">
+            <div class="hub-card__title">🗡️ Weapons & Armor</div>
+            <div class="hub-card__text">View purchases and equip gear.</div>
+          </button>
+          <button class="card hub-card" data-action="openProfileView" data-view="props">
+            <div class="hub-card__title">🏠 Properties</div>
+            <div class="hub-card__text">Owned buildings, income, and upgrades.</div>
+          </button>
+        </div>
+
+        <div class="section-title">Recent Activity</div>
+        <div class="card log" id="activityLog"></div>
+
+        <!-- ADMIN TOOLS (Profile only) -->
+        <div class="card" id="adminPanel" hidden style="margin-top:14px;">
+          <div class="section-title" style="margin-top:0;">🛠️ Admin Tools</div>
+
+          <div class="grid grid--2">
+            <button class="btn btn--small btn--primary" data-action="adminMoney">
+              +$10,000
+            </button>
+
+            <button class="btn btn--small btn--primary" data-action="adminXP">
+              +500 XP
+            </button>
+
+            <button class="btn btn--small btn--success" data-action="adminRefill">
+              Refill Energy & Health
+            </button>
+
+            <button class="btn btn--small btn--danger" data-action="adminClearJail">
+              Clear Jail
+            </button>
+
+            <button class="btn btn--small btn--primary" data-action="adminGems">
+              +100 💎 Gems
+            </button>
+          </div>
+        </div>
+
+        <!-- LOGOUT (Profile only) -->
+        <div class="card" style="margin-top:14px;">
+          <button class="btn btn--danger btn--small" data-action="logout">
+            Logout
+          </button>
         </div>
       </section>
-    </main>
-    
-    <div class="card" id="adminPanel" hidden>
-  <div class="section-title">🛠️ Admin Tools</div>
 
-  <div class="grid grid--2">
-    <button class="btn btn--small btn--primary" data-action="adminMoney">
-      +$10,000
-    </button>
+      <section class="profile-view" id="profileView-inventory" data-profile-view="inventory" hidden>
+        <div class="subhead">
+          <button class="btn btn--secondary btn--small" data-action="openProfileView" data-view="overview">← Back</button>
+          <div class="subhead__title">Inventory</div>
+        </div>
+        <div class="card" id="profileInventory"></div>
+      </section>
 
-    <button class="btn btn--small btn--primary" data-action="adminXP">
-      +500 XP
-    </button>
+      <section class="profile-view" id="profileView-gear" data-profile-view="gear" hidden>
+        <div class="subhead">
+          <button class="btn btn--secondary btn--small" data-action="openProfileView" data-view="overview">← Back</button>
+          <div class="subhead__title">Weapons & Armor</div>
+        </div>
+        <div class="card" id="profileGear"></div>
+      </section>
 
-    <button class="btn btn--small btn--success" data-action="adminRefill">
-      Refill Energy & Health
-    </button>
-
-    <button class="btn btn--small btn--danger" data-action="adminClearJail">
-      Clear Jail
-    </button>
+      <section class="profile-view" id="profileView-props" data-profile-view="props" hidden>
+        <div class="subhead">
+          <button class="btn btn--secondary btn--small" data-action="openProfileView" data-view="overview">← Back</button>
+          <div class="subhead__title">Properties</div>
+        </div>
+        <div class="card" id="profileProps"></div>
+        <div class="hint">Offline property income is capped at <b>4 hours</b>.</div>
+      </section>
+    </div>
   </div>
-</div>
-    
-<button class="btn btn--small btn--primary" data-action="adminGems">
-  +100 💎 Gems
-</button>
+</section>
+</main>
 
-<div class="card" style="margin-top:14px;">
-  <button class="btn btn--danger btn--small"
-    data-action="logout">
-    Logout
-  </button>
-</div>
-
-    <footer class="footer">
-      <div class="footer__left">Tip: GitHub Pages friendly. Everything saves in your browser (localStorage).</div>
-      <div class="footer__right">
-        <button class="btn btn--danger btn--small" data-action="hardReset">Reset Save</button>
-      </div>
-    </footer>
+<footer class="footer">
+  <div class="footer__left">Tip: GitHub Pages friendly. Everything saves in your browser (localStorage).</div>
+  <div class="footer__right">
+    <button class="btn btn--danger btn--small" data-action="hardReset">Reset Save</button>
   </div>
+</footer>
+</div>
 
  <!-- QUICK USE POPUP (NEW) -->
 <div class="quickuse" id="quickUse" hidden>
