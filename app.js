@@ -51,7 +51,8 @@ function loadAccounts() {
 function saveAccounts(obj) {
   localStorage.setItem(ACCOUNTS_KEY, JSON.stringify(obj));
 }
-const Admin123 = "admin"; // change if you want
+const ADMIN_USERNAME = "admin"; // change if you want
+
 
 
 const MS = {
@@ -111,8 +112,9 @@ function msToClock(ms) {
   return `${m}:${String(s).padStart(2, "0")}`;
 }
 function isAdmin() {
-  return currentUser === Admin123;
+  return currentUser === ADMIN_USERNAME;
 }
+
 
 /* =====================
    CRIMES (15)
@@ -2140,11 +2142,12 @@ async function login() {
   const p = (authPass?.value || "").trim();
   if (!u || !p) return openAuth("Enter username + password.");
 
- accounts[u] = {
+accounts[u] = {
   passHash,
   createdAt: Date.now(),
-  isAdmin: u === Admin123,
+  isAdmin: u === ADMIN_USERNAME,
 };
+
 
   const passHash = await sha256Hex(p);
   if (passHash !== rec.passHash) return openAuth("Wrong password.");
