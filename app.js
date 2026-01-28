@@ -294,6 +294,7 @@ function defaultState() {
     schema: SCHEMA_VERSION,
     player: {
       name: "Player",
+       gems: 0,
       avatar: "🙂",
       specialization: null, // disabled for now
       level: 1,
@@ -393,6 +394,7 @@ function sanitize(s) {
   s.player.level = Math.max(1, s.player.level || 1);
   s.player.xp = Math.max(0, s.player.xp || 0);
   s.player.money = Math.max(0, s.player.money || 0);
+  s.player.gems = Math.max(0, s.player.gems || 0);
 
   s.player.maxEnergy = Math.max(1, s.player.maxEnergy || 10);
   s.player.maxHealth = Math.max(1, s.player.maxHealth || 10);
@@ -2109,6 +2111,9 @@ function renderProfile() {
 
   healthText.textContent = `${state.player.health}/${state.player.maxHealth}`;
   healthBar.style.width = `${(state.player.health / state.player.maxHealth) * 100}%`;
+// If you have a place to display it:
+const gemsEl = document.getElementById("statGems");
+if (gemsEl) gemsEl.textContent = state.player.gems;
 
   statLevel.textContent = state.player.level;
   statAtk.textContent = state.player.attack;
