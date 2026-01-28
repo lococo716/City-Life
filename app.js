@@ -233,6 +233,12 @@ const SHOP_HEALING = [
   { id:"revive",  name:"⚡ Revive Shot",   desc:"+25 Health", price:780, health:25 },
 ];
 
+const GEM_ITEMS = [
+  { id:"jail_card", name:"🃏 Get Out of Jail", desc:"Instantly clears jail.", priceGems: 25 },
+  { id:"adrenaline", name:"💉 Adrenaline Shot", desc:"Boosts next 3 trainings.", priceGems: 40 },
+];
+
+
 /* =====================
    ARMS DEALER + BLACK MARKET
 ===================== */
@@ -317,6 +323,10 @@ function defaultState() {
     inventory: {},
     equipment: { weapon: null, armor: null },
     gear: { weapons: [], armor: [] },
+     
+  buffs: {
+   adrenalineTrainLeft: 0,
+  },
 
     blackMarket: {
       nextRefreshAt: now + BLACK_MARKET_REFRESH,
@@ -415,6 +425,9 @@ function sanitize(s) {
   s.gear.armor = Array.isArray(s.gear.armor) ? s.gear.armor : [];
 
   s.equipment = s.equipment || { weapon: null, armor: null };
+  s.buffs = s.buffs || { adrenalineTrainLeft: 0 };
+  s.buffs.adrenalineTrainLeft = Math.max(0, Math.floor(s.buffs.adrenalineTrainLeft || 0));
+
 
   // BLACK MARKET safety + backward compat
   s.blackMarket = s.blackMarket || {
@@ -542,7 +555,26 @@ function invAdd(item) {
 function invUse(itemId) {
   const it = state.inventory[itemId];
   if (!it || it.quantity <= 0) return;
+     // SPECIAL ITEMS
+  if (it.id === "jail_card") {
+    state.timers.jailUntil = null;
+    addLog("🃏 Used Get Out of Jail — you're free.");
+    toast("Jail cleared");
+    it.quantity -= 1;
+    if (it.quantity <= 0) delete state.inventory[itemId];
+    return;
+  }
 
+  if (it.id === "adrenaline") {
+    state.buffs.adrenalineTrainLeft = (state.buffs.adrenalineTrainLeft || 0) + 3;
+    addLog("💉 Adrenaline activated — next 3 trainings boosted.");
+    toast("Adrenaline active");
+    it.quantity -= 1;
+    if (it.quantity <= 0) delete state.inventory[itemId];
+    return;
+  }
+
+   
   if (it.energy) state.player.energy = clamp(state.player.energy + it.energy, 0, state.player.maxEnergy);
   if (it.health) state.player.health = clamp(state.player.health + it.health, 0, state.player.maxHealth);
 
@@ -1148,9 +1180,13 @@ function doGym(statKey) {
   const bonus = propertyTrainingBonus();
   const successChance = clamp(gym.success + bonus, 0.05, 0.95);
 
-  if (Math.random() <= successChance) {
-    state.player[statKey] += gym.gain[statKey];
-    state.player.xp += gym.xp;
+  let gain = gym.gain[statKey]; // normally 1
+if ((state.buffs?.adrenalineTrainLeft || 0) > 0) {
+  gain += 1; // makes it 2 per success
+  state.buffs.adrenalineTrainLeft -= 1;
+  addLog(`💉 Adrenaline boost! (${state.buffs.adrenalineTrainLeft} left)`);
+}
+state.player[statKey] += gain;
 
     addLog(`🏋️ ${gym.name}: +1 ${statKey.toUpperCase()} (+${pct(bonus)}% bonus)`);
     toast("Training success");
@@ -1793,6 +1829,25 @@ function renderShopPage() {
         `).join("")}
       </div>
     </div>
+function buyGemItem(itemId) {
+  const it = GEM_ITEMS.find(x => x.id === itemId);
+  if (!it) return;
+
+  if (state.player.gems < it.priceGems) return toast("Not enough Gems.");
+
+  state.player.gems -= it.priceGems;
+
+  invAdd({
+    id: it.id,
+    name: it.name,
+    type: "special",
+    energy: 0,
+    health: 0,
+  });
+
+  addLog(`💎 Bought ${it.name} for ${it.priceGems} Gems`);
+  toast("Purchased");
+}
 
     <div class="card" style="margin-top:12px;">
       <div class="section-title" style="margin-top:0;">Medical</div>
@@ -1819,6 +1874,30 @@ function renderShopPage() {
     </div>
   `;
 }
+    <div class="card" style="margin-top:12px;">
+      <div class="section-title" style="margin-top:0;">💎 Gems</div>
+      <div class="muted">Balance: 💎 ${state.player.gems}</div>
+      <div class="hr"></div>
+      <div class="list">
+        ${GEM_ITEMS.map(it => `
+          <div class="row">
+            <div class="row__left">
+              <div class="row__title">${it.name}</div>
+              <div class="row__sub">${it.desc}</div>
+            </div>
+            <div class="row__right">
+              <span class="tag">💎 ${it.priceGems}</span>
+              <button class="btn btn--small btn--primary"
+                data-action="buyGem"
+                data-item="${it.id}"
+                ${state.player.gems < it.priceGems ? "disabled" : ""}>
+                Buy
+              </button>
+            </div>
+          </div>
+        `).join("")}
+      </div>
+    </div>
 
 /* =====================
    BLACK MARKET (WEAPON OR ARMOR) + BUY
@@ -2253,6 +2332,7 @@ document.body.addEventListener("click", e => {
  if (a === "adminXP") adminAddXP();
  if (a === "adminRefill") adminRefill();
  if (a === "adminClearJail") adminClearJail();
+if (a === "buyGem") buyGemItem(btn.dataset.item);
 
   save();
   render();
