@@ -715,6 +715,12 @@ function adminClearJail() {
   addLog("🛠️ Admin: Jail cleared");
   toast("Jail cleared");
 }
+function adminAddGems() {
+  state.player.gems += 100;
+  addLog("🛠️ Admin: +100 💎 Gems");
+  toast("Admin gems added");
+}
+if (a === "adminGems") adminAddGems();
 
 /* =====================
    GEAR HELPERS
