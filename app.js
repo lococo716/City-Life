@@ -233,7 +233,27 @@ const SHOP_HEALING = [
   { id:"revive",  name:"⚡ Revive Shot",   desc:"+25 Health", price:780, health:25 },
 ];
 
-/* =====================
+/* ======/* =====================
+   GEM ITEMS (💎 Premium)
+===================== */
+
+const GEM_ITEMS = [
+  {
+    id: "jail_card",
+    name: "🚔 Get Out of Jail Card",
+    desc: "Instantly removes jail time",
+    priceGems: 5,
+    type: "jail"
+  },
+  {
+    id: "adrenaline",
+    name: "💉 Adrenaline Shot",
+    desc: "+1 stat per gym train (3 uses)",
+    priceGems: 8,
+    type: "adrenaline"
+  },
+];
+===============
    ARMS DEALER + BLACK MARKET
 ===================== */
 
@@ -317,6 +337,10 @@ function defaultState() {
     inventory: {},
     equipment: { weapon: null, armor: null },
     gear: { weapons: [], armor: [] },
+    buffs: {
+   adrenalineTrainLeft: 0,
+    },
+
 
     blackMarket: {
       nextRefreshAt: now + BLACK_MARKET_REFRESH,
@@ -637,6 +661,29 @@ function quickUseItem(itemId) {
 function buyShopItem(kind, itemId) {
   const list = kind === "food" ? SHOP_FOOD : kind === "healing" ? SHOP_HEALING : null;
   if (!list) return;
+function buyGemItem(itemId) {
+  const item = GEM_ITEMS.find(g => g.id === itemId);
+  if (!item) return;
+
+  if (state.player.gems < item.priceGems) {
+    toast("Not enough 💎 Gems");
+    return;
+  }
+
+  state.player.gems -= item.priceGems;
+
+  if (item.type === "jail") {
+    state.timers.jailUntil = null;
+    addLog("💎 Used Get Out of Jail Card");
+    toast("Freed from jail!");
+  }
+
+  if (item.type === "adrenaline") {
+    state.buffs.adrenalineTrainLeft += 3;
+    addLog("💎 Adrenaline activated (3 trainings)");
+    toast("Adrenaline active!");
+  }
+}
 
   const item = list.find(x => x.id === itemId);
   if (!item) return;
@@ -1793,6 +1840,30 @@ function renderShopPage() {
         `).join("")}
       </div>
     </div>
+<div class="card" style="margin-top:12px;">
+  <div class="section-title" style="margin-top:0;">💎 Gems</div>
+  <div class="muted">Balance: 💎 ${state.player.gems}</div>
+  <div class="hr"></div>
+  <div class="list">
+    ${GEM_ITEMS.map(it => `
+      <div class="row">
+        <div class="row__left">
+          <div class="row__title">${it.name}</div>
+          <div class="row__sub">${it.desc}</div>
+        </div>
+        <div class="row__right">
+          <span class="tag">💎 ${it.priceGems}</span>
+          <button class="btn btn--small btn--primary"
+            data-action="buyGem"
+            data-item="${it.id}"
+            ${state.player.gems < it.priceGems ? "disabled" : ""}>
+            Buy
+          </button>
+        </div>
+      </div>
+    `).join("")}
+  </div>
+</div>
 
     <div class="card" style="margin-top:12px;">
       <div class="section-title" style="margin-top:0;">Medical</div>
@@ -2231,6 +2302,8 @@ document.body.addEventListener("click", e => {
   if (a === "doMission") doMission(btn.dataset.mission);
 
   if (a === "buyShop") buyShopItem(btn.dataset.kind, btn.dataset.item);
+   if (a === "buyGem") buyGemItem(btn.dataset.item);
+
   if (a === "useInv") invUse(btn.dataset.item);
 
   if (a === "buyArms") buyArms(btn.dataset.kind, btn.dataset.item);
