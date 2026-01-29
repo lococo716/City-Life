@@ -2250,12 +2250,9 @@ async function login() {
   const p = (authPass?.value || "").trim();
   if (!u || !p) return openAuth("Enter username + password.");
 
-accounts[u] = {
-  passHash,
-  createdAt: Date.now(),
-  isAdmin: u === ADMIN_USERNAME,
-};
-
+  const accounts = loadAccounts();
+  const rec = accounts[u];
+  if (!rec) return openAuth("No account found.");
 
   const passHash = await sha256Hex(p);
   if (passHash !== rec.passHash) return openAuth("Wrong password.");
@@ -2267,13 +2264,6 @@ accounts[u] = {
   addLog(`👤 Logged in as ${u}`);
   closeAuth();
   render();
-}
-
-function logout() {
-  localStorage.removeItem(SESSION_KEY);
-  currentUser = null;
-  // keep state in memory but require auth again
-  openAuth("Logged out. Log in to continue.");
 }
 
 /* =====================
