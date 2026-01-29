@@ -233,9 +233,10 @@ const SHOP_HEALING = [
   { id:"revive",  name:"⚡ Revive Shot",   desc:"+25 Health", price:780, health:25 },
 ];
 
-/* ======/* =====================
+/* =====================
    GEM ITEMS (💎 Premium)
 ===================== */
+
 
 const GEM_ITEMS = [
   {
@@ -252,10 +253,12 @@ const GEM_ITEMS = [
     priceGems: 8,
     type: "adrenaline"
   },
-];
-===============
+]; 
+
+/* =====================
    ARMS DEALER + BLACK MARKET
 ===================== */
+
 
 const WEAPONS = [
   { id:"shiv",   name:"🔪 Shiv",   price:120,  atk:1 },
@@ -659,8 +662,32 @@ function quickUseItem(itemId) {
 ===================== */
 
 function buyShopItem(kind, itemId) {
-  const list = kind === "food" ? SHOP_FOOD : kind === "healing" ? SHOP_HEALING : null;
+  const list = kind === "food"
+    ? SHOP_FOOD
+    : kind === "healing"
+    ? SHOP_HEALING
+    : null;
   if (!list) return;
+
+  const item = list.find(x => x.id === itemId);
+  if (!item) return;
+
+  if (state.player.money < item.price) return toast("Not enough money.");
+
+  state.player.money -= item.price;
+
+  invAdd({
+    id: item.id,
+    name: item.name,
+    type: kind,
+    energy: item.energy || 0,
+    health: item.health || 0,
+  });
+
+  addLog(`🛒 Bought ${item.name} for $${item.price}`);
+  toast("Purchased");
+}
+
 function buyGemItem(itemId) {
   const item = GEM_ITEMS.find(g => g.id === itemId);
   if (!item) return;
@@ -684,6 +711,7 @@ function buyGemItem(itemId) {
     toast("Adrenaline active!");
   }
 }
+
 
   const item = list.find(x => x.id === itemId);
   if (!item) return;
