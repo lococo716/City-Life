@@ -2307,7 +2307,8 @@ document.body.addEventListener("click", e => {
   if (a === "upgradeProperty") upgradeProperty(btn.dataset.prop);
 
   if (a === "hardReset" && confirm("Reset all progress?")) {
-    localStorage.removeItem(SAVE_KEY);
+   localStorage.removeItem(getSaveKey());
+
     location.reload();
   }
  if (!isAdmin()) return;
