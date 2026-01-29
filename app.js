@@ -2232,8 +2232,6 @@ async function createAccount() {
   if (accounts[u]) return openAuth("That username already exists.");
 
   const passHash = await sha256Hex(p);
-  accounts[u] = { passHash, createdAt: Date.now() };
-  saveAccounts(accounts);
 
   localStorage.setItem(SESSION_KEY, JSON.stringify({ user: u }));
   currentUser = u;
